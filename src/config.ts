@@ -14,6 +14,11 @@ export interface SharedConfig {
   apiUrl: string;
   /** The active brand for this deployment. */
   brand: BrandConfig;
+  /** Cloudflare Turnstile public site key. When empty, the shared
+   *  <Turnstile> component renders nothing and immediately reports
+   *  the "skipped" sentinel to its callback — matching the backend's
+   *  short-circuit when TURNSTILE_SECRET_KEY is unset. */
+  turnstileSiteKey?: string;
 }
 
 let cfg: SharedConfig | null = null;
@@ -22,6 +27,7 @@ export function configureShared(opts: SharedConfig): void {
   cfg = {
     apiUrl: opts.apiUrl.replace(/\/$/, ""),
     brand: opts.brand,
+    turnstileSiteKey: opts.turnstileSiteKey ?? "",
   };
 }
 

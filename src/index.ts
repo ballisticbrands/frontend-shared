@@ -1,8 +1,8 @@
 // @ballisticbrands/frontend-shared — public entrypoint.
 //
-// v0.1.0: lib layer + brand context.
+// v0.2.0: adds auth-flow UI on top of v0.1.x's lib + brand context.
 
-export const SHARED_PACKAGE_VERSION = "0.1.0";
+export const SHARED_PACKAGE_VERSION = "0.2.0";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -49,3 +49,13 @@ export {
   trackAccountConnected,
 } from "./attribution";
 export type { Attribution } from "./attribution";
+
+// UI primitives (v0.2.0)
+export { Button } from "./components/Button";
+export { Input, Label } from "./components/Input";
+export { Turnstile } from "./components/Turnstile";
+export { VerifyEmailBanner } from "./components/VerifyEmailBanner";
+
+// Pages (v0.2.0)
+export { VerifyEmailPage } from "./pages/VerifyEmail";
+export { ForgotPasswordPage } from "./pages/ForgotPassword";
