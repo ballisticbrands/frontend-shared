@@ -1,0 +1,58 @@
+# Publishes @ballisticbrands/frontend-shared to GitHub Packages on
+# every tag push matching v*.*.* (semver). Tags are the source of
+# truth for versions — CI enforces that the tag matches package.json's
+# `version`, so a hand-rolled bump that forgot to tag won't publish.
+#
+# One-shot flow:
+#   1. Edit src/, bump package.json version, commit, push
+#   2. `git tag v0.1.0 && git push origin v0.1.0`
+#   3. This workflow runs, publishes to GH Packages
+#
+# Consumers read via ballisticbrands/*-frontend repos' package.json,
+# authenticated with NPM_TOKEN (a GH Actions secret backed by a PAT
+# with read:packages on this org).
+
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@ballisticbrands"
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag v$TAG_VERSION does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+          echo "Publishing @ballisticbrands/frontend-shared@$PKG_VERSION"
+
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
