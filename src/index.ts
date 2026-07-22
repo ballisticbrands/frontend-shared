@@ -2,7 +2,7 @@
 //
 // v0.2.0: adds auth-flow UI on top of v0.1.x's lib + brand context.
 
-export const SHARED_PACKAGE_VERSION = "0.2.0";
+export const SHARED_PACKAGE_VERSION = "0.3.0";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -59,3 +59,9 @@ export { VerifyEmailBanner } from "./components/VerifyEmailBanner";
 // Pages (v0.2.0)
 export { VerifyEmailPage } from "./pages/VerifyEmail";
 export { ForgotPasswordPage } from "./pages/ForgotPassword";
+
+// Auth form hooks (v0.3.0)
+export { useSignUpForm } from "./hooks/useSignUpForm";
+export type { UseSignUpFormReturn } from "./hooks/useSignUpForm";
+export { useSignInForm } from "./hooks/useSignInForm";
+export type { UseSignInFormReturn } from "./hooks/useSignInForm";

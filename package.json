@@ -1,6 +1,6 @@
 {
   "name": "@ballisticbrands/frontend-shared",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared code (auth flow, session, API client, brand context, common UI) for the Dragon-brand app frontends.",
   "private": false,
   "type": "module",
