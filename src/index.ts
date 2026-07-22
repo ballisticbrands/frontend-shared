@@ -1,11 +1,51 @@
 // @ballisticbrands/frontend-shared — public entrypoint.
 //
-// Every symbol consumers can import must appear here (re-exported from
-// its module). Anything not re-exported is an internal implementation
-// detail — freely rearrangeable across versions.
-//
-// v0.0.1 is intentionally empty: proves the build + publish pipeline
-// end-to-end before any real code is moved. Actual extraction lands
-// in v0.1.0 (lib layer) and v0.2.0 (auth-flow UI).
+// v0.1.0: lib layer + brand context.
 
-export const SHARED_PACKAGE_VERSION = "0.0.1";
+export const SHARED_PACKAGE_VERSION = "0.1.0";
+
+// Config
+export { configureShared, getSharedConfig } from "./config";
+export type { SharedConfig } from "./config";
+
+// Brand
+export type { BrandConfig } from "./brand-types";
+export { BrandProvider, useBrand } from "./brand-context";
+
+// API
+export { ApiError, apiFetch, SESSION_KEY } from "./api";
+
+// Session
+export {
+  getSessionToken,
+  setSessionToken,
+  clearSessionToken,
+  fetchCurrentUser,
+  useSession,
+} from "./session";
+export type { SessionUser } from "./session";
+
+// Auth
+export {
+  signIn,
+  signUp,
+  signOut,
+  requestPasswordReset,
+  verifyEmail,
+  resendVerification,
+} from "./auth";
+export type {
+  VerifyEmailSuccess,
+  VerifyEmailFailure,
+  ResendVerificationResult,
+} from "./auth";
+
+// Attribution
+export {
+  captureAttribution,
+  readAttribution,
+  identifyUserAcrossPlatforms,
+  tagClarityIdentity,
+  trackAccountConnected,
+} from "./attribution";
+export type { Attribution } from "./attribution";
