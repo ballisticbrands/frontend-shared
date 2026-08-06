@@ -381,14 +381,29 @@ export function trackAccountConnected(
  *
  * Returns how many activations were newly fired.
  */
+const ACTIVATION_MAX_AGE_DAYS = 7;
+
 export async function reconcileConnectionActivations(): Promise<number> {
   try {
-    const list = await apiFetch<Array<{ id?: string; provider?: string }>>("/v1/connections");
+    const list = await apiFetch<
+      Array<{ id?: string; provider?: string; connected_at?: string | null }>
+    >("/v1/connections");
     if (!Array.isArray(list)) return 0;
+
+    const cutoff = Date.now() - ACTIVATION_MAX_AGE_DAYS * 86_400_000;
     let fired = 0;
     for (const c of list) {
       if (!c?.id || !c?.provider) continue;
       if (loggedActivations().includes(c.id)) continue;
+
+      // Recency gate. The dedupe list is localStorage, so it is EMPTY on a
+      // device the user hasn't used before — without this, signing in on a
+      // new laptop would re-fire an activation for every connection they
+      // already had, inflating conversions. A missing timestamp means a
+      // legacy row, so treat it as old.
+      const ts = c.connected_at ? Date.parse(c.connected_at) : NaN;
+      if (!Number.isFinite(ts) || ts < cutoff) continue;
+
       trackAccountConnected(normaliseProvider(c.provider), { connectionId: c.id });
       fired++;
     }

@@ -2,7 +2,7 @@
 //
 // v0.2.0: adds auth-flow UI on top of v0.1.x's lib + brand context.
 
-export const SHARED_PACKAGE_VERSION = "0.4.0";
+export const SHARED_PACKAGE_VERSION = "0.4.1";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
