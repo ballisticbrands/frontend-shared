@@ -10,6 +10,7 @@
 //      user_id so future sessions from this user cross-reference
 //      back to the account.
 
+import { apiFetch } from "./api";
 import { getSharedConfig } from "./config";
 
 const STORAGE_KEY = "dragonbot_attribution_v1";
@@ -268,17 +269,77 @@ export function tagClarityIdentity(email?: string, name?: string): void {
 type ConnectionProvider = "amazon_seller" | "amazon_ads";
 
 /**
- * Fire a "connected an Amazon account" event across analytics
- * platforms and flip a durable user property. Call ONLY on a
- * genuinely NEW connection — never the re-authenticate button.
+ * Connecting an Amazon account fires TWO gtag events:
+ *
+ *   connect_amazon         ← the umbrella. THE Google Ads conversion event for
+ *                            every Dragon product (decided 2026-08-05).
+ *   connect_amazon_seller  ← the specific one, kept for segmentation.
+ *   connect_amazon_ads     ↲
+ *
+ * Why the umbrella is the conversion: getdragonbot is usable with an Ads-only
+ * connection, while refunds/reply are seller-only (their backend rejects ads).
+ * One event covers every product uniformly. In Google Ads it MUST be counted
+ * ONE_PER_CLICK — a single customer can connect several accounts.
  */
-export function trackAccountConnected(provider: ConnectionProvider): void {
+const ACTIVATIONS_KEY = "dragonbot_activations_v1";
+
+/** Connection ids this browser has already fired an activation for. */
+function loggedActivations(): string[] {
+  try {
+    const raw = localStorage.getItem(ACTIVATIONS_KEY);
+    const v = raw ? JSON.parse(raw) : [];
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
+function markActivationLogged(id: string): void {
+  try {
+    const seen = loggedActivations();
+    if (!seen.includes(id)) {
+      localStorage.setItem(ACTIVATIONS_KEY, JSON.stringify([...seen, id].slice(-200)));
+    }
+  } catch {
+    /* best-effort */
+  }
+}
+
+/**
+ * The same provider has three spellings across the stack:
+ * `amazon-selling-partner` (what /v1/connections returns),
+ * `amazon_selling_partner` (an older consumer type) and `amazon_seller` (here).
+ * Normalise defensively — getting this wrong silently files every seller
+ * connection as an "ads" one.
+ */
+function normaliseProvider(raw: string): ConnectionProvider {
+  return raw.toLowerCase().replace(/-/g, "_").includes("ads") ? "amazon_ads" : "amazon_seller";
+}
+
+/**
+ * Fire a "connected an Amazon account" event across analytics platforms and
+ * flip a durable user property. Call ONLY on a genuinely NEW connection —
+ * never the re-authenticate button.
+ *
+ * Pass `connectionId` whenever you have it: it de-duplicates, so the OAuth
+ * postMessage fast-path and `reconcileConnectionActivations()` can both call
+ * this without double-counting.
+ */
+export function trackAccountConnected(
+  provider: ConnectionProvider,
+  opts: { connectionId?: string } = {},
+): void {
+  const { connectionId } = opts;
+  if (connectionId && loggedActivations().includes(connectionId)) return;
+
   const isSeller = provider === "amazon_seller";
   const eventName = isSeller ? "connect_amazon_seller" : "connect_amazon_ads";
   const userProp = isSeller ? "spapi_connected" : "ads_connected";
 
   try {
     if (typeof window.gtag === "function") {
+      // Umbrella first — this is the Google Ads conversion.
+      window.gtag("event", "connect_amazon", { provider });
       window.gtag("event", eventName, { provider });
       window.gtag("set", "user_properties", { [userProp]: "true" });
     }
@@ -288,6 +349,7 @@ export function trackAccountConnected(provider: ConnectionProvider): void {
 
   try {
     if (typeof window.clarity === "function") {
+      window.clarity("event", "connect_amazon");
       window.clarity("event", eventName);
       window.clarity("set", userProp, "true");
     }
@@ -301,5 +363,38 @@ export function trackAccountConnected(provider: ConnectionProvider): void {
     }
   } catch {
     /* best-effort */
+  }
+
+  if (connectionId) markActivationLogged(connectionId);
+}
+
+/**
+ * Fire activation events for any connection the SERVER reports but which this
+ * browser has never logged. Call once when the dashboard mounts.
+ *
+ * ⚠️ Why this exists (2026-08-05): the activation event used to fire ONLY from
+ * the OAuth popup's postMessage. If that message was lost — popup blocked,
+ * closed a moment early, or the user navigated back manually — the connection
+ * succeeded server-side and the conversion was **never recorded**, silently.
+ * That is exactly what happened to the first real DragonReply connection.
+ * Server state is the source of truth; the postMessage is only a fast path.
+ *
+ * Returns how many activations were newly fired.
+ */
+export async function reconcileConnectionActivations(): Promise<number> {
+  try {
+    const list = await apiFetch<Array<{ id?: string; provider?: string }>>("/v1/connections");
+    if (!Array.isArray(list)) return 0;
+    let fired = 0;
+    for (const c of list) {
+      if (!c?.id || !c?.provider) continue;
+      if (loggedActivations().includes(c.id)) continue;
+      trackAccountConnected(normaliseProvider(c.provider), { connectionId: c.id });
+      fired++;
+    }
+    return fired;
+  } catch {
+    /* analytics must never break the dashboard */
+    return 0;
   }
 }
