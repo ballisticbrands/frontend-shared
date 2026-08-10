@@ -2,7 +2,7 @@
 //
 // v0.2.0: adds auth-flow UI on top of v0.1.x's lib + brand context.
 
-export const SHARED_PACKAGE_VERSION = "0.4.1";
+export const SHARED_PACKAGE_VERSION = "0.5.0";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -29,6 +29,7 @@ export type { SessionUser } from "./session";
 export {
   signIn,
   signUp,
+  signInWithGoogle,
   signOut,
   requestPasswordReset,
   verifyEmail,
@@ -56,6 +57,10 @@ export { Button } from "./components/Button";
 export { Input, Label } from "./components/Input";
 export { Turnstile } from "./components/Turnstile";
 export { VerifyEmailBanner } from "./components/VerifyEmailBanner";
+
+// Google sign-in (v0.5.0)
+export { GoogleSignInButton } from "./components/GoogleSignInButton";
+export { AuthDivider } from "./components/AuthDivider";
 
 // Pages (v0.2.0)
 export { VerifyEmailPage } from "./pages/VerifyEmail";

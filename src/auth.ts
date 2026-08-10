@@ -77,6 +77,18 @@ export async function signUp(
   });
 }
 
+/**
+ * Exchange a Google ID token (the `credential` GIS hands to
+ * <GoogleSignInButton>) for a session. One call serves both sign-up
+ * and sign-in — the backend resolves the Google identity to an
+ * existing account or creates one. Attribution rides along for the
+ * sign-up case; the backend ignores it on plain sign-ins.
+ */
+export async function signInWithGoogle(credential: string): Promise<{ error?: string }> {
+  if (!credential) return { error: "Google sign-in failed. Please try again." };
+  return exchange("/v1/auth/google", { credential, attribution: readAttribution() });
+}
+
 export async function requestPasswordReset(email: string): Promise<{ error?: string }> {
   if (!email) return { error: "Email is required." };
   try {

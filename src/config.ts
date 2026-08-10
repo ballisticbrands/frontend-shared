@@ -19,6 +19,12 @@ export interface SharedConfig {
    *  the "skipped" sentinel to its callback — matching the backend's
    *  short-circuit when TURNSTILE_SECRET_KEY is unset. */
   turnstileSiteKey?: string;
+  /** Google OAuth Web client ID for "Sign in with Google" (GIS).
+   *  When empty, the shared <GoogleSignInButton> renders nothing —
+   *  matching the backend's 501 short-circuit when GOOGLE_CLIENT_ID
+   *  is unset, so builds without Google configured just show the
+   *  email/password form. */
+  googleClientId?: string;
 }
 
 let cfg: SharedConfig | null = null;
@@ -28,6 +34,7 @@ export function configureShared(opts: SharedConfig): void {
     apiUrl: opts.apiUrl.replace(/\/$/, ""),
     brand: opts.brand,
     turnstileSiteKey: opts.turnstileSiteKey ?? "",
+    googleClientId: opts.googleClientId ?? "",
   };
 }
 
