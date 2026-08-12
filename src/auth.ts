@@ -133,6 +133,111 @@ export async function requestPasswordReset(email: string): Promise<{ error?: str
   }
 }
 
+// ─── Magic login links (passwordless sign-in) ───────────────────────
+
+export type RequestMagicLinkResult =
+  | { ok: true }
+  | { error: string; retryInSeconds?: number };
+
+/**
+ * Ask the backend to email a one-time sign-in link. Always succeeds
+ * with { ok: true } whether or not the email maps to an account
+ * (enumeration-safe on the backend) — the UI copy should say "if an
+ * account exists…". A 429 carries `retryInSeconds` (60s per-user
+ * cooldown); surface it as a countdown, same as resendVerification.
+ *
+ * `turnstileToken` mirrors sign-up: the endpoint triggers outbound
+ * mail unauthenticated, so production gates it behind Turnstile. Pass
+ * the widget's token ("skipped" on config-less builds).
+ */
+export async function requestMagicLink(
+  email: string,
+  turnstileToken?: string,
+): Promise<RequestMagicLinkResult> {
+  if (!email) return { error: "Email is required." };
+  try {
+    await apiFetch("/v1/auth/magic-link", {
+      method: "POST",
+      body: JSON.stringify({ email, turnstile_token: turnstileToken }),
+      auth: false,
+    });
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      const retry =
+        err.body &&
+        typeof err.body === "object" &&
+        "retry_in_seconds" in err.body &&
+        typeof (err.body as { retry_in_seconds: unknown }).retry_in_seconds === "number"
+          ? (err.body as { retry_in_seconds: number }).retry_in_seconds
+          : undefined;
+      return { error: err.message, retryInSeconds: retry };
+    }
+    return { error: "We couldn't send the email. Please try again in a moment." };
+  }
+}
+
+export type MagicLinkErrorCode = "invalid_token" | "expired_token" | "used_token";
+
+export type RedeemMagicLinkResult =
+  | { ok: true }
+  | { error: string; errorCode?: MagicLinkErrorCode };
+
+/**
+ * Redeem a magic link's token for a session. On success the session
+ * token is stored (same as sign-in) and the user is identified across
+ * analytics platforms with `fireSignUpEvent: false` — a magic login
+ * is a sign-IN, never a sign_up conversion (see the v0.5.1 gate).
+ *
+ * Distinct error codes let the /magic page render expired vs invalid
+ * vs already-used specifically.
+ */
+export async function redeemMagicLink(token: string): Promise<RedeemMagicLinkResult> {
+  if (!token) {
+    return { error: "This sign-in link is missing its token.", errorCode: "invalid_token" };
+  }
+  try {
+    const body = await apiFetch<TokenResponse>("/v1/auth/magic-login", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+      auth: false,
+    });
+    if (!body?.token) return { error: "Something went wrong. Please try again." };
+    setSessionToken(body.token);
+
+    // Fire-and-forget identification, mirroring exchange() — but with
+    // fireSignUpEvent pinned to false: the account already existed
+    // (the backend only mints links for existing users).
+    void (async () => {
+      try {
+        const me = await apiFetch<MeResponse>("/v1/auth/me");
+        if (me?.id) {
+          identifyUserAcrossPlatforms(me, { fireSignUpEvent: false, method: "email" });
+        }
+      } catch {
+        /* ignored — best-effort */
+      }
+    })();
+
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      const code =
+        err.body &&
+        typeof err.body === "object" &&
+        "error_code" in err.body &&
+        typeof (err.body as { error_code: unknown }).error_code === "string"
+          ? ((err.body as { error_code: string }).error_code as MagicLinkErrorCode)
+          : undefined;
+      return { error: err.message, errorCode: code };
+    }
+    if (err instanceof TypeError) {
+      return { error: "We couldn't reach our servers. Please try again in a moment." };
+    }
+    return { error: "We couldn't sign you in with this link. Please try again in a moment." };
+  }
+}
+
 export async function signOut(): Promise<void> {
   try {
     await apiFetch("/v1/auth/sign-out", { method: "POST" });

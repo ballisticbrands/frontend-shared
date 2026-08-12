@@ -4,8 +4,13 @@
 // v0.5.1: sign_up / CompleteRegistration conversions fire only on real
 //         account creation (identifyUserAcrossPlatforms opts), not on
 //         every sign-in.
+// v0.6.0: magic login links — requestMagicLink / redeemMagicLink,
+//         MagicLoginPage (/magic route), useMagicLinkForm;
+//         ForgotPasswordPage now requests a magic link (supersedes the
+//         never-built reset flow). Magic logins are sign-INS: redeem
+//         identifies with fireSignUpEvent: false.
 
-export const SHARED_PACKAGE_VERSION = "0.5.1";
+export const SHARED_PACKAGE_VERSION = "0.6.0";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -37,11 +42,16 @@ export {
   requestPasswordReset,
   verifyEmail,
   resendVerification,
+  requestMagicLink,
+  redeemMagicLink,
 } from "./auth";
 export type {
   VerifyEmailSuccess,
   VerifyEmailFailure,
   ResendVerificationResult,
+  RequestMagicLinkResult,
+  RedeemMagicLinkResult,
+  MagicLinkErrorCode,
 } from "./auth";
 
 // Attribution
@@ -69,8 +79,13 @@ export { AuthDivider } from "./components/AuthDivider";
 export { VerifyEmailPage } from "./pages/VerifyEmail";
 export { ForgotPasswordPage } from "./pages/ForgotPassword";
 
+// Magic login links (v0.6.0)
+export { MagicLoginPage } from "./pages/MagicLogin";
+
 // Auth form hooks (v0.3.0)
 export { useSignUpForm } from "./hooks/useSignUpForm";
 export type { UseSignUpFormReturn } from "./hooks/useSignUpForm";
 export { useSignInForm } from "./hooks/useSignInForm";
 export type { UseSignInFormReturn } from "./hooks/useSignInForm";
+export { useMagicLinkForm } from "./hooks/useMagicLinkForm";
+export type { UseMagicLinkFormReturn } from "./hooks/useMagicLinkForm";

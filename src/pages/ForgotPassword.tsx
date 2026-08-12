@@ -1,46 +1,34 @@
-// Public /forgot-password page. Renders the reset-email request
-// form; identical across brands (backend contract same, no brand-
-// specific copy beyond the tab title which reads brand.displayName
-// via useBrand()).
+// Public /forgot-password page. Since v0.6.0 this requests a magic
+// sign-in link instead of the never-built password-reset flow: for
+// passwordless (email-only signup) accounts a magic link IS password
+// recovery, and for password accounts it still gets the user back in.
+// Identical across brands (backend contract same; the tab title reads
+// brand.displayName via useBrand()).
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { requestPasswordReset } from "../auth";
 import { useBrand } from "../brand-context";
 import { Button } from "../components/Button";
 import { Input, Label } from "../components/Input";
+import { Turnstile } from "../components/Turnstile";
+import { useMagicLinkForm } from "../hooks/useMagicLinkForm";
 
 export function ForgotPasswordPage() {
   const brand = useBrand();
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
-  const [pending, setPending] = useState(false);
+  const form = useMagicLinkForm();
 
   useEffect(() => {
-    document.title = `Reset password — ${brand.displayName}`;
+    document.title = `Sign in without a password — ${brand.displayName}`;
   }, [brand.displayName]);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setPending(true);
-    const res = await requestPasswordReset(email);
-    setPending(false);
-    if (res.error) {
-      setError(res.error);
-      return;
-    }
-    setSent(true);
-  }
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight">Reset your password</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Forgot your password?</h1>
       <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-        We&apos;ll email you a link to set a new password.
+        No problem — we&apos;ll email you a one-time link that signs you
+        in. No password needed.
       </p>
-      <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+      <form className="mt-6 space-y-4" onSubmit={form.onSubmit}>
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -49,18 +37,28 @@ export function ForgotPasswordPage() {
             type="email"
             autoComplete="email"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={form.email}
+            onChange={(e) => form.setEmail(e.target.value)}
           />
         </div>
-        {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
-        {sent && (
+        <Turnstile onToken={form.onTurnstileToken} onExpired={form.onTurnstileExpired} />
+        {form.error && <p className="text-sm text-[var(--danger)]">{form.error}</p>}
+        {form.sent && (
           <p className="text-sm text-[var(--success)]">
-            If an account exists for that email, a reset link is on its way.
+            If an account exists for that email, a sign-in link is on its
+            way. It expires in 15 minutes — check your inbox.
           </p>
         )}
-        <Button type="submit" disabled={pending} className="w-full">
-          {pending ? "Sending…" : "Send reset link"}
+        <Button
+          type="submit"
+          disabled={form.pending || form.cooldownSeconds > 0}
+          className="w-full"
+        >
+          {form.cooldownSeconds > 0
+            ? `Try again in ${form.cooldownSeconds}s`
+            : form.pending
+              ? "Sending…"
+              : "Email me a sign-in link"}
         </Button>
       </form>
       <p className="mt-6 text-sm text-[var(--muted-foreground)]">
