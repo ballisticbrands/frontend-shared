@@ -189,6 +189,23 @@ function deriveSignupSource(a: Attribution | undefined): string {
   return "direct";
 }
 
+export interface IdentifyOptions {
+  /**
+   * Fire the signup CONVERSION events (GA4 `sign_up`, Meta
+   * `CompleteRegistration`) alongside the identification calls.
+   *
+   * Pass true ONLY when the backend actually CREATED an account on this
+   * request. Identification runs on every sign-IN too, and before this
+   * flag existed the conversion fired there as well — every returning
+   * sign-in inflated `sign_up`, which is why the funnel doctrine
+   * (Dragon-marketing ADS_STATUS.md) bans `sign_up` from ever being a
+   * bidding conversion. Default is false: identify ≠ convert.
+   */
+  fireSignUpEvent?: boolean;
+  /** GA4 `sign_up` method param. "email" unless the Google path. */
+  method?: "email" | "google";
+}
+
 /**
  * Identify a signed-in/up user across our analytics platforms.
  *
@@ -199,13 +216,17 @@ function deriveSignupSource(a: Attribution | undefined): string {
  *               PII. GA4 gets the user id + non-PII signup_source.
  *   · Meta    — external_id = opaque user id.
  */
-export function identifyUserAcrossPlatforms(user: {
-  id: string;
-  email?: string;
-  name?: string;
-}): void {
+export function identifyUserAcrossPlatforms(
+  user: {
+    id: string;
+    email?: string;
+    name?: string;
+  },
+  opts: IdentifyOptions = {},
+): void {
   const { id: userId, email, name } = user;
   if (!userId) return;
+  const { fireSignUpEvent = false, method = "email" } = opts;
 
   const signupSource = deriveSignupSource(readAttribution());
 
@@ -214,7 +235,7 @@ export function identifyUserAcrossPlatforms(user: {
       const ga4Id = getSharedConfig().brand.ga4MeasurementId;
       window.gtag("config", ga4Id, { user_id: userId });
       window.gtag("set", "user_properties", { signup_source: signupSource });
-      window.gtag("event", "sign_up", { method: "email" });
+      if (fireSignUpEvent) window.gtag("event", "sign_up", { method });
     }
   } catch {
     /* best-effort */
@@ -241,7 +262,8 @@ export function identifyUserAcrossPlatforms(user: {
   }
 
   try {
-    if (typeof window.fbq === "function") {
+    // Conversion, not identification — same gate as GA4's sign_up.
+    if (fireSignUpEvent && typeof window.fbq === "function") {
       window.fbq("trackCustom", "CompleteRegistration", { external_id: userId });
     }
   } catch {

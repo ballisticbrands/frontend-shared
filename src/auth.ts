@@ -5,18 +5,38 @@ import { ApiError, apiFetch } from "./api";
 import { clearSessionToken, setSessionToken } from "./session";
 import { identifyUserAcrossPlatforms, readAttribution, tagClarityIdentity } from "./attribution";
 
-type TokenResponse = { token: string; expires_in?: number };
+// `created` is set by the backend on endpoints that can mint a NEW
+// account (sign-up: always true; /google: true only on the create
+// path). Older backends omit it — see the `isNewUser` derivation.
+type TokenResponse = { token: string; expires_in?: number; created?: boolean };
 type MeResponse = { id: string; email: string; name?: string };
 
-async function exchange(path: string, payload: Record<string, unknown>): Promise<{ error?: string }> {
+type AuthKind = "sign-in" | "sign-up" | "google";
+
+async function exchange(
+  path: string,
+  payload: Record<string, unknown>,
+  kind: AuthKind,
+): Promise<{ error?: string }> {
   try {
-    const { token } = await apiFetch<TokenResponse>(path, {
+    const body = await apiFetch<TokenResponse>(path, {
       method: "POST",
       body: JSON.stringify(payload),
       auth: false,
     });
+    const token = body?.token;
     if (!token) return { error: "Something went wrong. Please try again." };
     setSessionToken(token);
+
+    // Did this request CREATE an account? Drives the sign_up conversion
+    // event — firing it on sign-ins too is the bug that made GA4
+    // `sign_up` uncountable (every returning session re-fired it).
+    //   sign-up  → always a new account (the endpoint 409s otherwise)
+    //   sign-in  → never
+    //   google   → only when the backend says so; an older backend that
+    //              doesn't send `created` yields false, which UNDER-counts
+    //              Google signups briefly — the safe direction.
+    const isNewUser = kind === "sign-up" || (kind === "google" && body.created === true);
 
     // Fire-and-forget: fetch the user id + broadcast it into GA4 /
     // Clarity / Meta so future sessions from this user cross-reference
@@ -25,7 +45,12 @@ async function exchange(path: string, payload: Record<string, unknown>): Promise
     void (async () => {
       try {
         const me = await apiFetch<MeResponse>("/v1/auth/me");
-        if (me?.id) identifyUserAcrossPlatforms(me);
+        if (me?.id) {
+          identifyUserAcrossPlatforms(me, {
+            fireSignUpEvent: isNewUser,
+            method: kind === "google" ? "google" : "email",
+          });
+        }
       } catch {
         /* ignored — best-effort */
       }
@@ -44,7 +69,7 @@ export async function signIn(email: string, password: string): Promise<{ error?:
   // Tag Clarity synchronously up front — don't wait on the async
   // /v1/auth/me identify (which can silently fail on flaky connections).
   tagClarityIdentity(email);
-  return exchange("/v1/auth/sign-in", { email, password });
+  return exchange("/v1/auth/sign-in", { email, password }, "sign-in");
 }
 
 export async function signUp(
@@ -68,13 +93,17 @@ export async function signUp(
   // build without Turnstile still works. The SignUp form supplies the
   // string "skipped" when the widget is disabled — the backend's
   // verifyTurnstile short-circuits on both paths.
-  return exchange("/v1/auth/sign-up", {
-    email,
-    password,
-    name,
-    attribution,
-    turnstile_token: turnstileToken,
-  });
+  return exchange(
+    "/v1/auth/sign-up",
+    {
+      email,
+      password,
+      name,
+      attribution,
+      turnstile_token: turnstileToken,
+    },
+    "sign-up",
+  );
 }
 
 /**
@@ -86,7 +115,7 @@ export async function signUp(
  */
 export async function signInWithGoogle(credential: string): Promise<{ error?: string }> {
   if (!credential) return { error: "Google sign-in failed. Please try again." };
-  return exchange("/v1/auth/google", { credential, attribution: readAttribution() });
+  return exchange("/v1/auth/google", { credential, attribution: readAttribution() }, "google");
 }
 
 export async function requestPasswordReset(email: string): Promise<{ error?: string }> {

@@ -1,8 +1,11 @@
 // @ballisticbrands/frontend-shared — public entrypoint.
 //
 // v0.2.0: adds auth-flow UI on top of v0.1.x's lib + brand context.
+// v0.5.1: sign_up / CompleteRegistration conversions fire only on real
+//         account creation (identifyUserAcrossPlatforms opts), not on
+//         every sign-in.
 
-export const SHARED_PACKAGE_VERSION = "0.5.0";
+export const SHARED_PACKAGE_VERSION = "0.5.1";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -50,7 +53,7 @@ export {
   trackAccountConnected,
   reconcileConnectionActivations,
 } from "./attribution";
-export type { Attribution } from "./attribution";
+export type { Attribution, IdentifyOptions } from "./attribution";
 
 // UI primitives (v0.2.0)
 export { Button } from "./components/Button";
