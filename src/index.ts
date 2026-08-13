@@ -10,7 +10,14 @@
 //         never-built reset flow). Magic logins are sign-INS: redeem
 //         identifies with fireSignUpEvent: false.
 
-export const SHARED_PACKAGE_VERSION = "0.6.0";
+// v0.7.0: the dashboard rebuild. Adds a left-nav AppShell (replacing
+//         each brand's four-tab strip), a metrics DashboardMetricsPage
+//         backed by the new /v1/metrics endpoints, a ConnectAiPage
+//         backed by /v1/usage, and the chart/stat primitives both need.
+//         Keys move here from the brand apps because ConnectAiPage
+//         mints them.
+
+export const SHARED_PACKAGE_VERSION = "0.7.0";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -89,3 +96,87 @@ export { useSignInForm } from "./hooks/useSignInForm";
 export type { UseSignInFormReturn } from "./hooks/useSignInForm";
 export { useMagicLinkForm } from "./hooks/useMagicLinkForm";
 export type { UseMagicLinkFormReturn } from "./hooks/useMagicLinkForm";
+
+// ─── Dashboard (v0.7.0) ───────────────────────────────────────────────
+
+// Metrics API + formatters
+export {
+  fetchMetricsOverview,
+  fetchTopSkus,
+  METRIC_RANGES,
+  RANGE_LABELS,
+  NO_VALUE,
+  formatMoney,
+  formatNumber,
+  formatPercent,
+  formatRelativeTime,
+  formatDateRange,
+  deltaRatio,
+} from "./lib/metrics";
+export type {
+  MetricsRange,
+  MetricTotals,
+  MetricsCoverage,
+  MetricsOverview,
+  MetricsSeriesPoint,
+  TopSku,
+  TopSkuSort,
+  TopSkusResult,
+} from "./lib/metrics";
+
+// Agent-usage API
+export { fetchUsageActivity, fetchUsageSummary, describeTool } from "./lib/usage";
+export type { UsageActivityRow, UsageSummary } from "./lib/usage";
+
+// API keys (moved out of the brand apps — ConnectAiPage mints them)
+export { listApiKeys, createApiKey, revokeApiKey } from "./lib/keys";
+export type { ApiKey, MintedKey, McpClientConfigs } from "./lib/keys";
+
+// MCP client catalog
+export {
+  MCP_CLIENTS,
+  STARTER_PROMPTS,
+  mcpClientById,
+  defaultClientForAiChoice,
+} from "./lib/mcp-clients";
+export type { McpClient, McpClientId, McpClientStep, SnippetKind } from "./lib/mcp-clients";
+
+// Layout + navigation
+export { AppShell, PageContainer, PageHeader } from "./components/layout/AppShell";
+export type { AppShellProps } from "./components/layout/AppShell";
+export { SideNav, MobileNav } from "./components/nav/SideNav";
+export type { NavItem, SideNavProps } from "./components/nav/SideNav";
+
+// Surface + data-display primitives
+export { Card, CardHeader, CardTitle, CardDescription, CardBody } from "./components/ui/Card";
+export { Badge } from "./components/ui/Badge";
+export { StatTile, Sparkline } from "./components/ui/StatTile";
+export type { StatTileProps } from "./components/ui/StatTile";
+export { TrendChart } from "./components/ui/TrendChart";
+export type { TrendChartProps, TrendPoint } from "./components/ui/TrendChart";
+export { CodeBlock } from "./components/ui/CodeBlock";
+export { CopyButton } from "./components/ui/CopyButton";
+export {
+  Skeleton,
+  StatRowSkeleton,
+  EmptyState,
+  ErrorState,
+  CoverageNotes,
+} from "./components/ui/feedback";
+export {
+  ChartIcon,
+  PlugIcon,
+  DatabaseIcon,
+  KeyIcon,
+  SettingsIcon,
+  LifebuoyIcon,
+  CheckIcon,
+  SparkIcon,
+  ExternalLinkIcon,
+} from "./components/ui/icons";
+
+// Dashboard pages
+export { DashboardMetricsPage, useMetricsOverview } from "./pages/DashboardMetrics";
+export type { DashboardMetricsPageProps } from "./pages/DashboardMetrics";
+export { ConnectAiPage } from "./pages/ConnectAi";
+export type { ConnectAiPageProps } from "./pages/ConnectAi";
