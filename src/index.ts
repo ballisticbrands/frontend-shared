@@ -17,7 +17,14 @@
 //         Keys move here from the brand apps because ConnectAiPage
 //         mints them.
 
-export const SHARED_PACKAGE_VERSION = "0.7.0";
+// v0.8.0: VerifiedMargins — the profile settings surface
+//         (ProfileSettingsPage) and the public profile renderer
+//         (PublicProfilePage), plus the /v1/profiles + 
+//         /v1/public/profiles clients they sit on. Both pages are
+//         deliberately unstyled: correct behaviour first, design
+//         pass later.
+
+export const SHARED_PACKAGE_VERSION = "0.8.0";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -180,3 +187,44 @@ export { DashboardMetricsPage, useMetricsOverview } from "./pages/DashboardMetri
 export type { DashboardMetricsPageProps } from "./pages/DashboardMetrics";
 export { ConnectAiPage } from "./pages/ConnectAi";
 export type { ConnectAiPageProps } from "./pages/ConnectAi";
+
+// ─── VerifiedMargins (v0.8.0) ─────────────────────────────────────────
+
+export {
+  listProfiles,
+  createProfile,
+  fetchProfile,
+  updateProfile,
+  checkUsername,
+  changeUsername,
+  fetchConnectionOptions,
+  linkConnection,
+  unlinkConnection,
+  setConnectionCogs,
+  fetchProfilePreview,
+  fetchPublicProfile,
+  SELLER_TYPES,
+  SOCIAL_FIELDS,
+  VISIBILITY_FIELDS,
+} from "./lib/profiles";
+export type {
+  Profile,
+  ProfileDetail,
+  ProfileConnection,
+  ConnectionOption,
+  ProfileSettingsPatch,
+  PublicProfile,
+  PublicProfileMoved,
+  CurrencyTotals,
+  SellerType,
+  SocialField,
+  Socials,
+  UsernameAvailability,
+  Visibility,
+  VisibilityField,
+} from "./lib/profiles";
+
+export { ProfileSettingsPage } from "./pages/ProfileSettings";
+export type { ProfileSettingsPageProps } from "./pages/ProfileSettings";
+export { PublicProfilePage } from "./pages/PublicProfile";
+export type { PublicProfilePageProps } from "./pages/PublicProfile";
