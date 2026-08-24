@@ -16,6 +16,10 @@
 //     fill it
 //   * the username field reports availability before it is spent, and
 //     shows how many of the two changes remain
+//   * the picture is UPLOADED, not pasted — AvatarField sends the file
+//     to our own storage. The paste-a-URL box stays beside it because
+//     some people genuinely do want to point at their own CDN, but it
+//     is no longer the only way in
 //
 // The page never computes a metric. It reads what the API returns.
 
@@ -23,16 +27,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "../api";
 import { VerifyAccountsSection } from "../components/verification/VerifyAccounts";
 import {
+  AVATAR_ACCEPT,
+  AVATAR_MAX_BYTES,
   changeUsername,
   checkUsername,
   fetchConnectionOptions,
   fetchProfile,
   linkConnection,
+  removeProfileAvatar,
   setConnectionCogs,
   SELLER_TYPES,
   SOCIAL_FIELDS,
   unlinkConnection,
   updateProfile,
+  uploadProfileAvatar,
   VISIBILITY_FIELDS,
   type ConnectionOption,
   type ProfileDetail,
@@ -43,7 +51,7 @@ import {
 } from "../lib/profiles";
 
 /** Where a confirmation belongs — beside the control that caused it. */
-type StatusSlot = "save" | "publish" | "username" | "connections";
+type StatusSlot = "save" | "publish" | "username" | "connections" | "avatar";
 
 export interface ProfileSettingsPageProps {
   profileId: string;
@@ -217,17 +225,17 @@ export function ProfileSettingsPage({ profileId, publicBaseUrl, onPublished }: P
           <br />
           <small>{form.bio.length}/500</small>
         </p>
-        <p>
-          <label htmlFor="avatarUrl">Avatar URL</label>
-          <br />
-          <input
-            id="avatarUrl"
-            type="url"
-            placeholder="https://…"
-            value={form.avatarUrl}
-            onChange={(e) => patch("avatarUrl", e.target.value)}
-          />
-        </p>
+        <AvatarField
+          profileId={profileId}
+          avatarUrl={form.avatarUrl}
+          displayName={form.displayName || profile.username}
+          status={status}
+          onSay={say}
+          /* Deliberately does NOT re-load the profile: the upload has
+             already written avatarUrl server-side, and reloading would
+             throw away every unsaved edit in this form. */
+          onChanged={(url) => patch("avatarUrl", url)}
+        />
         <p>
           <label htmlFor="websiteUrl">Website</label>
           <br />
@@ -526,6 +534,142 @@ function ConnectionsSection({
 
 /** Renders the confirmation only in the slot that produced it, so clicking
  *  Save does not also flash a message down beside Publish. */
+/**
+ * The picture. Upload is the real path; the URL box beside it is the
+ * escape hatch.
+ *
+ * Three things this does that matter:
+ *
+ *   * It uploads IMMEDIATELY on pick, rather than staging the file until
+ *     Save. A picture is the one field where you want to see the result
+ *     before you commit to anything else on the page, and the endpoint
+ *     writes avatarUrl itself — so there is nothing to stage.
+ *   * The size check here is a COURTESY, not a gate. It saves a doomed
+ *     1 MB round trip and gives a better message than a 413; the server
+ *     re-checks the bytes and decides the format from them regardless.
+ *   * Remove clears the field on the server too, so the page never shows
+ *     a picture that a reload would bring back.
+ */
+function AvatarField({
+  profileId,
+  avatarUrl,
+  displayName,
+  status,
+  onSay,
+  onChanged,
+}: {
+  profileId: string;
+  avatarUrl: string;
+  /** Alt text — a profile picture with no alt is invisible to a screen
+   *  reader and to anyone whose images failed to load. */
+  displayName: string;
+  status: { at: StatusSlot; message: string } | null;
+  onSay: (at: StatusSlot, message: string) => void;
+  onChanged: (url: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const fileInput = useRef<HTMLInputElement | null>(null);
+
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    if (file.size > AVATAR_MAX_BYTES) {
+      onSay(
+        "avatar",
+        `That picture is ${Math.round(file.size / 1024)} KB. Pictures are limited to ${Math.round(
+          AVATAR_MAX_BYTES / 1024,
+        )} KB — try a smaller one.`,
+      );
+      return;
+    }
+    setBusy(true);
+    onSay("avatar", "Uploading…");
+    try {
+      const result = await uploadProfileAvatar(profileId, file);
+      onChanged(result.avatar_url);
+      onSay("avatar", "Picture updated.");
+    } catch (err) {
+      onSay("avatar", errorMessage(err));
+    } finally {
+      setBusy(false);
+      // Let the same file be picked again after a failure.
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  };
+
+  const remove = async () => {
+    setBusy(true);
+    try {
+      await removeProfileAvatar(profileId);
+      onChanged("");
+      onSay("avatar", "Picture removed.");
+    } catch (err) {
+      onSay("avatar", errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* A fragment of <p>s, NOT its own <section>: this is one field of
+     "About", and brand stylesheets give every <section> a divider rule —
+     nesting one here would draw a line through the middle of About. */
+  return (
+    <>
+      <p>
+        {avatarUrl ? (
+          <img
+            data-avatar-preview
+            src={avatarUrl}
+            alt={`${displayName}'s profile picture`}
+            width={96}
+            height={96}
+            style={{ objectFit: "cover", borderRadius: "50%" }}
+          />
+        ) : (
+          <small>No picture yet.</small>
+        )}
+      </p>
+      <p>
+        <label htmlFor="avatarFile">Profile picture</label>
+        <br />
+        <input
+          id="avatarFile"
+          ref={fileInput}
+          type="file"
+          accept={AVATAR_ACCEPT}
+          disabled={busy}
+          onChange={(e) => void pick(e.target.files?.[0])}
+        />
+        <br />
+        <small>
+          PNG, JPEG or WebP, up to {Math.round(AVATAR_MAX_BYTES / 1024)} KB. Uploads as
+          soon as you pick it.
+        </small>
+      </p>
+      {avatarUrl ? (
+        <p>
+          <button type="button" onClick={() => void remove()} disabled={busy}>
+            Remove picture
+          </button>
+        </p>
+      ) : null}
+      <p>
+        <label htmlFor="avatarUrl">…or paste an image URL</label>
+        <br />
+        <input
+          id="avatarUrl"
+          type="url"
+          placeholder="https://…"
+          value={avatarUrl}
+          onChange={(e) => onChanged(e.target.value)}
+        />
+        <br />
+        <small>Saved with the rest of this section.</small>
+      </p>
+      <Status status={status} at="avatar" />
+    </>
+  );
+}
+
 function Status({
   status,
   at,

@@ -132,6 +132,45 @@ export function updateProfile(id: string, patch: ProfileSettingsPatch): Promise<
   });
 }
 
+/** Hard cap the backend enforces on an uploaded picture. Mirrored here
+ *  ONLY so the page can say "too big" without a round trip — the server
+ *  check is the gate, this is a courtesy. */
+export const AVATAR_MAX_BYTES = 1024 * 1024;
+
+/** What the file picker offers. The backend decides from the magic
+ *  bytes regardless, so this list narrows the picker, it does not
+ *  authorize anything. */
+export const AVATAR_ACCEPT = "image/png,image/jpeg,image/webp";
+
+export interface AvatarUploadResult {
+  /** A permanent, public URL on our own object storage — never a
+   *  hotlink and never a signed URL that expires. */
+  avatar_url: string;
+  profile: Profile;
+}
+
+/**
+ * Upload a profile picture: the image file ITSELF as the request body,
+ * with its own content type. Not multipart, not base64 — the endpoint
+ * takes raw bytes (see the backend's routes/profiles.ts).
+ *
+ * `file.type` is sent for honesty, not for authorization: the server
+ * reads the magic bytes and ignores what we claim.
+ */
+export function uploadProfileAvatar(id: string, file: Blob): Promise<AvatarUploadResult> {
+  return apiFetch<AvatarUploadResult>(`/v1/profiles/${encodeURIComponent(id)}/avatar`, {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+}
+
+/** Take the picture off the profile. The stored object is left alone —
+ *  it is content-addressed, so it is nobody's to reuse or bust. */
+export function removeProfileAvatar(id: string): Promise<Profile> {
+  return updateProfile(id, { avatar_url: null });
+}
+
 export function checkUsername(username: string, profileId?: string): Promise<UsernameAvailability> {
   const params = new URLSearchParams({ username });
   if (profileId) params.set("profile_id", profileId);

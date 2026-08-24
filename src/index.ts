@@ -56,6 +56,13 @@
 //         (lib/connections), lifted out of dragonbot-frontend rather than
 //         copied a second time, and requestProfileSnapshot.
 
+// v0.9.0: VerifiedMargins profiles get a real picture. ProfileSettings'
+//         About section gains an Upload picture control (with a preview
+//         and Remove) beside the paste-a-URL field, on
+//         POST /v1/profiles/:id/avatar — the image file itself as the
+//         body, ≤ 1 MB. The URL field stays: some people genuinely want
+//         to point at their own CDN.
+
 export const SHARED_PACKAGE_VERSION = "0.9.0";
 
 // Config
@@ -237,11 +244,16 @@ export {
   requestProfileSnapshot,
   fetchProfilePreview,
   fetchPublicProfile,
+  uploadProfileAvatar,
+  removeProfileAvatar,
+  AVATAR_ACCEPT,
+  AVATAR_MAX_BYTES,
   SELLER_TYPES,
   SOCIAL_FIELDS,
   VISIBILITY_FIELDS,
 } from "./lib/profiles";
 export type {
+  AvatarUploadResult,
   Profile,
   ProfileDetail,
   ProfileConnection,
