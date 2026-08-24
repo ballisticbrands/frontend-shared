@@ -13,12 +13,26 @@
 //   * a currency with no rate is shown natively, never converted
 //   * `noindex` is surfaced so the host app can emit the meta tag
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ApiError } from "../api";
 import { fetchPublicProfile, type PublicProfile } from "../lib/profiles";
 
 export interface PublicProfilePageProps {
   username: string;
+  /**
+   * Rendered beside the profile header — the host app's slot for an "Edit
+   * your profile" link when the viewer owns this page, and whatever else
+   * belongs there later (share, report).
+   *
+   * ⚠️ A slot rather than a `canEdit` flag on purpose: whether you own a
+   * profile is SESSION knowledge, and this component is deliberately
+   * session-free — it renders public data for anyone, including a crawler
+   * with no cookies. Handing it the session so it can decide would make the
+   * public page depend on auth state and give it two rendering modes to keep
+   * honest. The host already knows who is signed in; it passes the answer,
+   * not the question.
+   */
+  actions?: ReactNode;
   /** Called when the username was released and the caller should
    *  redirect (301) to the current one. */
   onMoved?: (to: string) => void;
@@ -41,6 +55,7 @@ function money(n: number | null, currency: string): string {
 
 export function PublicProfilePage({
   username,
+  actions,
   onMoved,
   defaultMonths = 12,
   defaultCurrency = "USD",
@@ -81,6 +96,7 @@ export function PublicProfilePage({
     <main data-noindex={profile.noindex ? "true" : undefined}>
       <h1>{profile.display_name ?? profile.username}</h1>
       <p>/{profile.username}</p>
+      {actions ? <p data-profile-actions>{actions}</p> : null}
       {profile.bio ? <p>{profile.bio}</p> : null}
       {profile.seller_type ? <p>{profile.seller_type.replace(/_/g, " ")}</p> : null}
 

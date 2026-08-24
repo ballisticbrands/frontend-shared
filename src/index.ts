@@ -34,7 +34,11 @@
 //         control confirms its own save; and Publish no longer doubles as
 //         Unpublish.
 
-export const SHARED_PACKAGE_VERSION = "0.8.2";
+// v0.8.3: PublicProfilePage takes an `actions` slot, so a host app can put an
+//         "Edit your profile" link on a page the viewer owns without the
+//         component itself having to know who is signed in.
+
+export const SHARED_PACKAGE_VERSION = "0.8.3";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
