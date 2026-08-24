@@ -75,7 +75,15 @@ export interface ProfileDetail extends Profile {
 export interface ProfileConnection {
   id: string;
   provider: string;
+  /** The REAL account name where one is known — the SP-API storefront name or
+   *  the Ads profile's account name — falling back to the generic provider
+   *  label. See connectionToWire in the backend's routes/profiles.ts. */
   name: string;
+  /** Ads only: "seller" | "vendor" | "agency". */
+  account_type?: string | null;
+  /** Two-letter country codes. Disambiguates the common case of one seller
+   *  holding several connections under the same storefront name. */
+  countries?: string[];
   cogs_basis: "per_sku" | "blended_pct";
   blended_cogs_pct: number | null;
 }

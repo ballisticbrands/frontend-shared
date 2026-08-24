@@ -37,10 +37,16 @@ import {
   type Visibility,
 } from "../lib/profiles";
 
+/** Where a confirmation belongs — beside the control that caused it. */
+type StatusSlot = "save" | "publish" | "username" | "connections";
+
 export interface ProfileSettingsPageProps {
   profileId: string;
   /** Where the public page lives, for the "view profile" link. */
   publicBaseUrl?: string;
+  /** Called with the public URL after a successful publish. Lets the host app
+   *  route internally or open a tab; when unset the page navigates there. */
+  onPublished?: (publicUrl: string) => void;
 }
 
 interface FormState {
@@ -70,12 +76,20 @@ function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-export function ProfileSettingsPage({ profileId, publicBaseUrl }: ProfileSettingsPageProps) {
+export function ProfileSettingsPage({ profileId, publicBaseUrl, onPublished }: ProfileSettingsPageProps) {
   const [profile, setProfile] = useState<ProfileDetail | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [connections, setConnections] = useState<ConnectionOption[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  /* Where the message belongs, not just what it says.
+   *
+   * 🚨 This used to be a bare string rendered once, next to the <h1>. Save
+   * lives at the bottom of "What the public sees" and Publish at the very
+   * bottom of the page, so the confirmation appeared hundreds of pixels above
+   * the fold — you clicked Save and nothing visibly happened. The message was
+   * there the whole time; it was just somewhere you were never looking. */
+  const [status, setStatus] = useState<{ at: StatusSlot; message: string } | null>(null);
+  const say = (at: StatusSlot, message: string) => setStatus({ at, message });
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -117,22 +131,35 @@ export function ProfileSettingsPage({ profileId, publicBaseUrl }: ProfileSetting
         visibility: form.visibility,
       });
       await load();
-      setStatus("Saved.");
+      say("save", "Saved.");
     } catch (err) {
-      setStatus(errorMessage(err));
+      say("save", errorMessage(err));
     } finally {
       setSaving(false);
     }
   };
+
+  const publicUrl = `${publicBaseUrl ?? "https://verifiedmargins.com"}/${profile.username}`;
 
   const setPublished = async (published: boolean) => {
     setStatus(null);
     try {
       await updateProfile(profileId, { published });
       await load();
-      setStatus(published ? "Your profile is live." : "Your profile is no longer public.");
+      if (!published) {
+        say("publish", "Your profile is no longer public.");
+        return;
+      }
+      say("publish", "Your profile is live. Taking you there…");
+      // Publishing is the one action whose whole point is the page it
+      // produces — confirming it in place and leaving the seller on a form
+      // makes them go and find their own profile to check it worked. The host
+      // app can override the destination (open a tab, route internally); the
+      // default just goes.
+      if (onPublished) onPublished(publicUrl);
+      else window.location.assign(publicUrl);
     } catch (err) {
-      setStatus(errorMessage(err));
+      say("publish", errorMessage(err));
     }
   };
 
@@ -146,7 +173,7 @@ export function ProfileSettingsPage({ profileId, publicBaseUrl }: ProfileSetting
           /{profile.username}
         </a>
       </p>
-      {status ? <p role="status">{status}</p> : null}
+      <Status status={status} at="username" />
 
       <UsernameSection profile={profile} onChanged={load} />
 
@@ -262,6 +289,7 @@ export function ProfileSettingsPage({ profileId, publicBaseUrl }: ProfileSetting
       </section>
 
       <p>
+        <Status status={status} at="save" />
         <button type="button" onClick={save} disabled={saving}>
           {saving ? "Saving…" : "Save"}
         </button>
@@ -271,7 +299,7 @@ export function ProfileSettingsPage({ profileId, publicBaseUrl }: ProfileSetting
         profileId={profileId}
         connections={connections}
         onChanged={load}
-        onStatus={setStatus}
+        onStatus={(m) => say("username", m)}
       />
 
       <section>
@@ -288,6 +316,7 @@ export function ProfileSettingsPage({ profileId, publicBaseUrl }: ProfileSetting
             {profile.published ? "Unpublish" : "Publish my profile"}
           </button>
         </p>
+        <Status status={status} at="publish" />
         <p>
           <small>
             Unpublishing hides the page immediately. Nothing is deleted, and you can publish
@@ -387,7 +416,11 @@ function UsernameSection({
           {availability.available ? `/${availability.username} is available.` : availability.detail}
         </p>
       ) : null}
-      {status ? <p role="status">{status}</p> : null}
+      {status ? (
+        <p role="status" data-status>
+          {status}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -442,7 +475,11 @@ function ConnectionsSection({
                   disabled={c.linked_elsewhere}
                   onChange={() => toggle(c)}
                 />{" "}
-                {c.name}
+                <span data-account-name>{c.name}</span>{" "}
+                <span data-pill>{providerLabel(c.provider, c.account_type)}</span>
+                {c.countries && c.countries.length > 0 ? (
+                  <span data-countries>{c.countries.join(" · ")}</span>
+                ) : null}
               </label>
               {c.linked_elsewhere ? <small> — already on another profile</small> : null}
               {c.linked_here ? <CogsBasisControl profileId={profileId} connection={c} onChanged={onChanged} onStatus={onStatus} /> : null}
@@ -464,6 +501,39 @@ function ConnectionsSection({
 /** The blendedCogsPct fallback, for the seller who will never upload
  *  per-SKU costs. The page is explicit that this makes the margin
  *  modelled rather than verified — the badge changes accordingly. */
+/** What kind of account this is, for the pill beside its name.
+ *
+ * Derived from the provider rather than sent by the API: the provider IS the
+ * type, and a second server-side string would be one more thing to keep in
+ * step. Ads accounts additionally carry a sub-type (seller / vendor / agency)
+ * which is worth showing — an Attribution profile comes back as "agency" and
+ * looks identical to a real ads account otherwise. */
+/** Renders the confirmation only in the slot that produced it, so clicking
+ *  Save does not also flash a message down beside Publish. */
+function Status({
+  status,
+  at,
+}: {
+  status: { at: StatusSlot; message: string } | null;
+  at: StatusSlot;
+}) {
+  if (!status || status.at !== at) return null;
+  return (
+    <p role="status" data-status>
+      {status.message}
+    </p>
+  );
+}
+
+function providerLabel(provider: string, accountType?: string | null): string {
+  if (provider === "amazon_selling_partner") return "Seller account";
+  if (provider === "amazon_ads") {
+    return accountType ? `Ads · ${accountType}` : "Ads account";
+  }
+  if (provider === "manual") return "Added by hand";
+  return provider;
+}
+
 function CogsBasisControl({
   profileId,
   connection,

@@ -24,7 +24,12 @@
 //         deliberately unstyled: correct behaviour first, design
 //         pass later.
 
-export const SHARED_PACKAGE_VERSION = "0.8.0";
+// v0.8.1: ProfileSettings — the connected-accounts list shows the real
+//         account name with a type pill instead of the provider label;
+//         confirmations render beside the control that caused them; and
+//         publishing navigates to the profile it just produced.
+
+export const SHARED_PACKAGE_VERSION = "0.8.1";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
