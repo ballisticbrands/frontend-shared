@@ -177,6 +177,20 @@ export function setConnectionCogs(
   );
 }
 
+/**
+ * Ask the backend to rebuild this profile's numbers now rather than waiting
+ * for the nightly 08:30 UTC run. Fired right after a connection is linked.
+ *
+ * 202, with nothing to wait on: the builder scans two years of warehouse data
+ * per connection and takes minutes — and for a connection authorized seconds
+ * ago there is no warehouse data at all yet, because the SP-API initial sync
+ * runs for hours. So the UI that calls this must say "we're pulling your
+ * numbers", never "done". Resolves as soon as the request is accepted.
+ */
+export function requestProfileSnapshot(id: string): Promise<{ status: string }> {
+  return apiFetch(`/v1/profiles/${encodeURIComponent(id)}/snapshot`, { method: "POST" });
+}
+
 export function fetchProfilePreview(
   id: string,
   opts: { months?: number; currency?: string } = {},

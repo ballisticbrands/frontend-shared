@@ -10,6 +10,10 @@
 //   * publishing is a separate, explicit action from saving
 //   * the connection opt-in lists only the signed-in user's OWN
 //     connections, because only they may publish them
+//   * there is a way to CONNECT an account, not just to opt one in —
+//     VerifyAccountsSection, above the list. Without it a seller who has
+//     never used another Dragon product has an empty list and no way to
+//     fill it
 //   * the username field reports availability before it is spent, and
 //     shows how many of the two changes remain
 //
@@ -17,6 +21,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "../api";
+import { VerifyAccountsSection } from "../components/verification/VerifyAccounts";
 import {
   changeUsername,
   checkUsername,
@@ -305,6 +310,15 @@ export function ProfileSettingsPage({ profileId, publicBaseUrl, onPublished }: P
           {saving ? "Saving…" : "Save"}
         </button>
       </p>
+
+      {/* Verification sits ABOVE the connected-accounts list, and that order is
+          the point: the list can only ever show accounts you already have, and
+          until this section existed there was nothing anywhere in the product
+          that STARTED an Amazon connection. A seller who had never used
+          DragonBot arrived at an empty list with no way to fill it — connect →
+          verified numbers → publish was unreachable from the product's own UI.
+          See FEATURE_VM_2026-08-24_amazon-account-verification-flow. */}
+      <VerifyAccountsSection profileId={profileId} onLinked={load} />
 
       <ConnectionsSection
         profileId={profileId}

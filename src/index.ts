@@ -48,6 +48,14 @@
 //         takes optional footer-link props so a brand with no passwords
 //         need not ask "Know your password?".
 
+// v0.9.0: VerifiedMargins can finally CONNECT an account. ProfileSettings
+//         gains a "Verify your numbers" section above the connected-accounts
+//         list — two buttons (seller, ads), three methods each, of which
+//         Amazon OAuth is real and screenshot-upload / book-a-call ship as
+//         labelled placeholders. Adds the shared OAuth popup client
+//         (lib/connections), lifted out of dragonbot-frontend rather than
+//         copied a second time, and requestProfileSnapshot.
+
 export const SHARED_PACKAGE_VERSION = "0.9.0";
 
 // Config
@@ -226,6 +234,7 @@ export {
   linkConnection,
   unlinkConnection,
   setConnectionCogs,
+  requestProfileSnapshot,
   fetchProfilePreview,
   fetchPublicProfile,
   SELLER_TYPES,
@@ -248,6 +257,42 @@ export type {
   Visibility,
   VisibilityField,
 } from "./lib/profiles";
+
+// ─── Amazon OAuth connect (v0.9.0) ────────────────────────────────────
+//
+// The popup dance, shared instead of copied a third time. Brand apps with
+// their own working copy (dragonbot-frontend) can keep it; new surfaces
+// use this one.
+
+export {
+  apiOrigin,
+  openOAuthPopup,
+  pollUntilClosed,
+  providerLabel,
+  readOAuthResult,
+  startConnection,
+} from "./lib/connections";
+export type { ConnectProvider, OAuthResultMessage, StartConnectionResult } from "./lib/connections";
+
+// Account verification (v0.9.0). NO_IDENTIFYING_INFO is exported because it
+// is a promise the product makes, not decoration: a host app that restates it
+// must restate THIS string, and the backend has a public-payload regression
+// test that keeps the promise true
+// (sellerconnect src/routes/public-profile-privacy.http.test.ts).
+export {
+  CALENDLY_URL,
+  NO_IDENTIFYING_INFO,
+  PrivacyPromise,
+  VERIFY_TARGETS,
+  VerifyAccountModal,
+  VerifyAccountsSection,
+} from "./components/verification/VerifyAccounts";
+export type {
+  VerifyAccountModalProps,
+  VerifyAccountsSectionProps,
+  VerifyMethod,
+  VerifyTarget,
+} from "./components/verification/VerifyAccounts";
 
 export { ProfileSettingsPage } from "./pages/ProfileSettings";
 export type { ProfileSettingsPageProps } from "./pages/ProfileSettings";
