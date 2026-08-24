@@ -29,7 +29,12 @@
 //         confirmations render beside the control that caused them; and
 //         publishing navigates to the profile it just produced.
 
-export const SHARED_PACKAGE_VERSION = "0.8.1";
+// v0.8.2: pills name the platform ("Amazon seller account") so a second
+//         provider can be added without renaming everything; the cost-basis
+//         control confirms its own save; and Publish no longer doubles as
+//         Unpublish.
+
+export const SHARED_PACKAGE_VERSION = "0.8.2";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

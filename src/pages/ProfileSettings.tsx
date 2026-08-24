@@ -141,6 +141,17 @@ export function ProfileSettingsPage({ profileId, publicBaseUrl, onPublished }: P
 
   const publicUrl = `${publicBaseUrl ?? "https://verifiedmargins.com"}/${profile.username}`;
 
+  /**
+   * Publish, or re-publish after edits.
+   *
+   * ⚠️ There is deliberately NO unpublish control here any more. The button
+   * used to toggle, which meant that once a profile was live the only thing
+   * the Publish section offered was "Unpublish" — so pushing an edit read as
+   * unpublish-then-publish-again. Taking a page down is a rare, deliberate act
+   * and belongs somewhere it cannot be confused with saving; updating is the
+   * common one and now has the button to itself. The API still accepts
+   * `published: false`, so nothing is lost by moving that control later.
+   */
   const setPublished = async (published: boolean) => {
     setStatus(null);
     try {
@@ -310,17 +321,18 @@ export function ProfileSettingsPage({ profileId, publicBaseUrl, onPublished }: P
         <p>
           <button
             type="button"
-            onClick={() => setPublished(!profile.published)}
-            disabled={profile.username_is_placeholder && !profile.published}
+            onClick={() => setPublished(true)}
+            disabled={profile.username_is_placeholder}
           >
-            {profile.published ? "Unpublish" : "Publish my profile"}
+            {profile.published ? "Update my profile" : "Publish my profile"}
           </button>
         </p>
         <Status status={status} at="publish" />
         <p>
           <small>
-            Unpublishing hides the page immediately. Nothing is deleted, and you can publish
-            again whenever you like.
+            {profile.published
+              ? "Your profile is live. Publishing again pushes your latest changes and takes you to the page."
+              : "Publishing makes your page public and takes you straight to it."}
           </small>
         </p>
       </section>
@@ -498,16 +510,6 @@ function ConnectionsSection({
   );
 }
 
-/** The blendedCogsPct fallback, for the seller who will never upload
- *  per-SKU costs. The page is explicit that this makes the margin
- *  modelled rather than verified — the badge changes accordingly. */
-/** What kind of account this is, for the pill beside its name.
- *
- * Derived from the provider rather than sent by the API: the provider IS the
- * type, and a second server-side string would be one more thing to keep in
- * step. Ads accounts additionally carry a sub-type (seller / vendor / agency)
- * which is worth showing — an Attribution profile comes back as "agency" and
- * looks identical to a real ads account otherwise. */
 /** Renders the confirmation only in the slot that produced it, so clicking
  *  Save does not also flash a message down beside Publish. */
 function Status({
@@ -525,15 +527,44 @@ function Status({
   );
 }
 
+/** What kind of account this is, for the pill beside its name.
+ *
+ * ⚠️ The PLATFORM is part of the label, deliberately: "Amazon seller account",
+ * not "Seller account". Today every connection is Amazon, so the platform
+ * reads as redundant — but a Shopify store is a plausible next provider, and
+ * at that point an unqualified "Seller account" beside a "Shopify store" is
+ * actively confusing. Naming it now costs nothing and means the pills stay
+ * consistent when a second platform lands, instead of needing a migration of
+ * everyone's mental model.
+ *
+ * Derived from the provider rather than sent by the API: the provider IS the
+ * type, and a second server-side string would be one more thing to keep in
+ * step.
+ *
+ * The Ads sub-type is surfaced only when it is NOT "seller". A normal ads
+ * account is a seller account and saying so twice is noise; an Attribution
+ * profile comes back as "agency" and is worth flagging, because it looks
+ * identical to a real ads account otherwise. */
 function providerLabel(provider: string, accountType?: string | null): string {
-  if (provider === "amazon_selling_partner") return "Seller account";
+  if (provider === "amazon_selling_partner") return "Amazon seller account";
   if (provider === "amazon_ads") {
-    return accountType ? `Ads · ${accountType}` : "Ads account";
+    return accountType && accountType !== "seller"
+      ? `Amazon ads account · ${accountType}`
+      : "Amazon ads account";
   }
   if (provider === "manual") return "Added by hand";
   return provider;
 }
 
+/** The blendedCogsPct fallback, for the seller who will never upload per-SKU
+ *  costs. The page is explicit that this makes the margin modelled rather than
+ *  verified — the badge changes accordingly.
+ *
+ *  Keeps its OWN status rather than reporting into the page-level slot: there
+ *  is one of these per linked connection, so a shared slot would show "Cost
+ *  basis saved." against whichever control happened to render it, not the one
+ *  you pressed. Local state puts the confirmation next to the button that
+ *  earned it, which is the whole point. */
 function CogsBasisControl({
   profileId,
   connection,
@@ -543,8 +574,10 @@ function CogsBasisControl({
   profileId: string;
   connection: ConnectionOption;
   onChanged: () => Promise<void>;
+  /** Still reported upward for errors worth surfacing page-wide. */
   onStatus: (s: string) => void;
 }) {
+  const [status, setStatus] = useState<string | null>(null);
   const [basis, setBasis] = useState(connection.cogs_basis);
   const [pct, setPct] = useState(
     connection.blended_cogs_pct === null ? "" : String(connection.blended_cogs_pct),
@@ -557,8 +590,9 @@ function CogsBasisControl({
         blended_cogs_pct: basis === "blended_pct" && pct !== "" ? Number(pct) : null,
       });
       await onChanged();
-      onStatus("Cost basis saved.");
+      setStatus("Cost basis saved.");
     } catch (err) {
+      setStatus(errorMessage(err));
       onStatus(errorMessage(err));
     }
   };
@@ -610,6 +644,11 @@ function CogsBasisControl({
           Save cost basis
         </button>
       </p>
+      {status ? (
+        <p role="status" data-status>
+          {status}
+        </p>
+      ) : null}
     </div>
   );
 }
