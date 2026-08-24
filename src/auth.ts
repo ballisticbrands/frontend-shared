@@ -7,7 +7,10 @@ import { identifyUserAcrossPlatforms, readAttribution, tagClarityIdentity } from
 
 // `created` is set by the backend on endpoints that can mint a NEW
 // account (sign-up: always true; /google: true only on the create
-// path). Older backends omit it — see the `isNewUser` derivation.
+// path; /magic-login: true only on the redemption that completed a
+// passwordless-brand signup). Older backends omit it — see the
+// `isNewUser` derivations, which all read `=== true` so a missing
+// flag UNDER-counts, which is the safe direction.
 type TokenResponse = { token: string; expires_in?: number; created?: boolean };
 type MeResponse = { id: string; email: string; name?: string };
 
@@ -149,6 +152,13 @@ export type RequestMagicLinkResult =
  * `turnstileToken` mirrors sign-up: the endpoint triggers outbound
  * mail unauthenticated, so production gates it behind Turnstile. Pass
  * the widget's token ("skipped" on config-less builds).
+ *
+ * First-touch attribution rides along, exactly as it does on sign-up.
+ * On a passwordless brand this request IS the signup — the backend
+ * creates the account for an unknown email — so without the blob every
+ * one of those users lands with null UTMs and the paid-traffic
+ * reporting silently zeroes out. Brands where the endpoint is
+ * login-only ignore it.
  */
 export async function requestMagicLink(
   email: string,
@@ -158,7 +168,11 @@ export async function requestMagicLink(
   try {
     await apiFetch("/v1/auth/magic-link", {
       method: "POST",
-      body: JSON.stringify({ email, turnstile_token: turnstileToken }),
+      body: JSON.stringify({
+        email,
+        turnstile_token: turnstileToken,
+        attribution: readAttribution(),
+      }),
       auth: false,
     });
     return { ok: true };
@@ -185,9 +199,19 @@ export type RedeemMagicLinkResult =
 
 /**
  * Redeem a magic link's token for a session. On success the session
- * token is stored (same as sign-in) and the user is identified across
- * analytics platforms with `fireSignUpEvent: false` — a magic login
- * is a sign-IN, never a sign_up conversion (see the v0.5.1 gate).
+ * token is stored, same as sign-in.
+ *
+ * ⚠️ Changed in v0.9.0. This used to identify with
+ * `fireSignUpEvent: false` unconditionally, on the reasoning that "a
+ * magic login is always a sign-IN". That stopped being true the moment
+ * a brand went passwordless: there, /v1/auth/magic-link CREATES the
+ * account for an unknown email, so the first redemption of that link
+ * IS the signup. The backend now says which it was, and we relay it.
+ *
+ * `created` is authoritative and conservative: it is true only for the
+ * redemption that completed a signup, false for every returning user,
+ * and absent on brands that never create here (and on an older
+ * backend), where `=== true` correctly yields false.
  *
  * Distinct error codes let the /magic page render expired vs invalid
  * vs already-used specifically.
@@ -205,14 +229,16 @@ export async function redeemMagicLink(token: string): Promise<RedeemMagicLinkRes
     if (!body?.token) return { error: "Something went wrong. Please try again." };
     setSessionToken(body.token);
 
-    // Fire-and-forget identification, mirroring exchange() — but with
-    // fireSignUpEvent pinned to false: the account already existed
-    // (the backend only mints links for existing users).
+    // Fire-and-forget identification, mirroring exchange(). The
+    // sign_up / CompleteRegistration conversion fires only when the
+    // backend reports this redemption created the account — never for
+    // a returning user, who would otherwise re-fire it on every link.
+    const isNewUser = body.created === true;
     void (async () => {
       try {
         const me = await apiFetch<MeResponse>("/v1/auth/me");
         if (me?.id) {
-          identifyUserAcrossPlatforms(me, { fireSignUpEvent: false, method: "email" });
+          identifyUserAcrossPlatforms(me, { fireSignUpEvent: isNewUser, method: "email" });
         }
       } catch {
         /* ignored — best-effort */

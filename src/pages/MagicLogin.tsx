@@ -6,8 +6,9 @@
 // end. Modeled on VerifyEmail.tsx.
 //
 // Public route — no auth required. The token itself IS the credential.
-// No sign_up conversion fires here: redeemMagicLink identifies with
-// fireSignUpEvent: false (a magic login is always a sign-in).
+// Whether a sign_up conversion fires here is the backend's call:
+// redeemMagicLink relays the `created` flag, which is true only for the
+// redemption that completed a passwordless-brand signup (v0.9.0).
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -38,7 +39,25 @@ const EXPLANATIONS: Record<MagicLinkErrorCode | "fallback", string> = {
   fallback: "Request a fresh link below and try again.",
 };
 
-export function MagicLoginPage() {
+export interface MagicLoginPageProps {
+  /** Where the "back to sign in" footer link points. Default "/sign-in". */
+  signInPath?: string;
+  /**
+   * Copy above that link. The default asks "Know your password?", which
+   * is nonsense on a brand that has none — VerifiedMargins passes its
+   * own, and the brief for that brand is explicit that a password must
+   * not be mentioned anywhere in the product.
+   */
+  signInPrompt?: string;
+  /** The link's own label. Default "Sign in". */
+  signInLabel?: string;
+}
+
+export function MagicLoginPage({
+  signInPath = "/sign-in",
+  signInPrompt = "Know your password?",
+  signInLabel = "Sign in",
+}: MagicLoginPageProps = {}) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const brand = useBrand();
@@ -105,9 +124,9 @@ export function MagicLoginPage() {
           </p>
           <RequestAnotherLinkForm />
           <p className="mt-6 text-sm text-[var(--muted-foreground)]">
-            Know your password?{" "}
-            <Link to="/sign-in" className="font-medium text-[var(--foreground)] hover:underline">
-              Sign in
+            {signInPrompt}{" "}
+            <Link to={signInPath} className="font-medium text-[var(--foreground)] hover:underline">
+              {signInLabel}
             </Link>
           </p>
         </>

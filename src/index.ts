@@ -38,7 +38,17 @@
 //         "Edit your profile" link on a page the viewer owns without the
 //         component itself having to know who is signed in.
 
-export const SHARED_PACKAGE_VERSION = "0.8.3";
+// v0.9.0: passwordless brands. requestMagicLink now carries the
+//         first-touch attribution blob (on a passwordless brand that
+//         request CREATES the account, so without it every signup lands
+//         with null UTMs), and redeemMagicLink relays the backend's
+//         `created` flag instead of pinning fireSignUpEvent to false —
+//         the v0.6.0 note below ("magic logins are sign-INS") is no
+//         longer true where /magic-link signs people up. MagicLoginPage
+//         takes optional footer-link props so a brand with no passwords
+//         need not ask "Know your password?".
+
+export const SHARED_PACKAGE_VERSION = "0.9.0";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -107,8 +117,9 @@ export { AuthDivider } from "./components/AuthDivider";
 export { VerifyEmailPage } from "./pages/VerifyEmail";
 export { ForgotPasswordPage } from "./pages/ForgotPassword";
 
-// Magic login links (v0.6.0)
+// Magic login links (v0.6.0; props added in v0.9.0)
 export { MagicLoginPage } from "./pages/MagicLogin";
+export type { MagicLoginPageProps } from "./pages/MagicLogin";
 
 // Auth form hooks (v0.3.0)
 export { useSignUpForm } from "./hooks/useSignUpForm";
