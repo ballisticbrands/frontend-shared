@@ -63,7 +63,16 @@
 //         body, ≤ 1 MB. The URL field stays: some people genuinely want
 //         to point at their own CDN.
 
-export const SHARED_PACKAGE_VERSION = "0.9.0";
+// v0.9.2: the "Verify Amazon ads account" button is COMMENTED OUT (see
+//         VerifyAccounts.tsx for the full why). Linking an ads connection
+//         wrote zero metric rows, so the control implied work it never
+//         did; the backend now refuses the link outright and no longer
+//         offers ads in connection-options. The ads wiring
+//         (VERIFY_TARGETS.ads, the "ads" VerifyTarget, the modal) is kept
+//         live and tested so restoring it is an edit, not a rewrite.
+//         sellerconnect FEATURE_VM_2026-08-24_comment-out-ads-connection.
+
+export const SHARED_PACKAGE_VERSION = "0.9.2";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

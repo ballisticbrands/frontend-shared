@@ -7,6 +7,11 @@
 //      Asserted against the exported NO_IDENTIFYING_INFO constant, so
 //      deleting it from one of the two places fails — which is the whole
 //      point of it being one constant.
+//   1b. THE ADS BUTTON IS GONE FROM THE SECTION, AND THE ADS WIRING IS NOT.
+//      FEATURE_VM_2026-08-24_comment-out-ads-connection commented the button
+//      out because linking an ads connection wrote zero metric rows. The spec,
+//      the target and the modal stay live and tested so a restore is an edit;
+//      the section must not offer a control the backend now refuses.
 //   2. THE PLACEHOLDERS ARE HONEST PLACEHOLDERS. Upload and Manual say they
 //      are not available, their controls are disabled, and neither makes a
 //      network call. A placeholder a seller can mistake for a working
@@ -78,17 +83,30 @@ const METHODS = ["connect", "upload", "call"];
 
 // ─── the promise ─────────────────────────────────────────────────────
 
-test("the no-identifying-information message renders under the buttons", () => {
+test("the no-identifying-information message renders under the button", () => {
   const { html } = render(
     h(VerifyAccountsSection, { profileId: "prof_1", onLinked: noop }),
   );
   assert.ok(html.includes("Verify your numbers"));
   assert.ok(html.includes(VERIFY_TARGETS.seller.buttonLabel));
-  assert.ok(html.includes(VERIFY_TARGETS.ads.buttonLabel));
   assert.ok(
     html.includes(escapeForHtml(NO_IDENTIFYING_INFO)),
-    "the privacy promise must sit under the buttons — it is what a seller reads before clicking",
+    "the privacy promise must sit under the button — it is what a seller reads before clicking",
   );
+});
+
+test("the section offers the seller account only — the ads button is commented out", () => {
+  // Not cosmetic: the backend answers 400 provider_not_supported for an ads
+  // link, so a button that reached the ads flow would be a button that
+  // errors. If this fails because someone uncommented it, read §4 of
+  // FEATURE_VM_2026-08-24_comment-out-ads-connection first — restoring it is
+  // not just uncommenting.
+  const { html } = render(
+    h(VerifyAccountsSection, { profileId: "prof_1", onLinked: noop }),
+  );
+  assert.ok(!html.includes(VERIFY_TARGETS.ads.buttonLabel), "the ads button is off");
+  const buttons = [...html.matchAll(/<button[^>]*>([^<]*)<\/button>/g)].map((m) => m[1].trim());
+  assert.deepEqual(buttons, [VERIFY_TARGETS.seller.buttonLabel]);
 });
 
 test("the message repeats inside every modal, on every method", () => {
@@ -118,10 +136,13 @@ test("both modals offer all three methods and name the connect option for their 
   }
 });
 
-test("the ads button promises a badge, not a number it cannot deliver", () => {
-  // Linking an ads connection contributes ZERO metric rows — the snapshot
-  // builder skips non-SP-API providers. If this copy ever promises TACOS or
-  // ad spend on the page, it is promising a number that never appears.
+test("the retained ads copy promises a badge, not a number it cannot deliver", () => {
+  // The ads button is commented out (see above), but its spec, copy and modal
+  // are kept live so a restore is an edit rather than a rewrite — which is
+  // only worth keeping while the copy stays honest. Linking an ads connection
+  // contributes ZERO metric rows: the snapshot builder skips non-SP-API
+  // providers. If this copy ever promises TACOS or ad spend on the page, it is
+  // promising a number that never appears.
   const { html } = render(modal("ads", "connect"));
   assert.ok(html.includes("Proves you&#x27;re a real advertiser"));
   assert.ok(/does not add ad\s+spend or TACOS/.test(html.replace(/\s+/g, " ")));

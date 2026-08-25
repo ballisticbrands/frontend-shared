@@ -516,7 +516,12 @@ function ConnectionsSection({
         numbers on a profile, and nobody can put theirs on yours.
       </p>
       {connections.length === 0 ? (
-        <p>You haven't connected an Amazon account yet.</p>
+        // Deliberately "seller account": since
+        // FEATURE_VM_2026-08-24_comment-out-ads-connection the list only
+        // ever holds SP-API and manual connections, so a seller who has
+        // connected Amazon Ads (and only Ads) would read the old
+        // "you haven't connected an Amazon account" as false.
+        <p>You haven't connected an Amazon seller account yet.</p>
       ) : (
         <ul>
           {connections.map((c) => (

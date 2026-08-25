@@ -1,4 +1,10 @@
-// "Verify your numbers" — the two buttons that make VerifiedMargins usable.
+// "Verify your numbers" — the button that makes VerifiedMargins usable.
+//
+// ONE button today, not two. The "Verify Amazon ads account" button is
+// commented out below (sellerconnect
+// skills/feature-dev/…/FEATURE_VM_2026-08-24_comment-out-ads-connection);
+// the ads WIRING — the target spec, the provider, the modal — is kept live
+// and tested so restoring it is an edit, not a rewrite.
 //
 // Filed as skills/feature-dev/open/FEATURE_VM_2026-08-24_amazon-account-verification-flow
 // in the sellerconnect repo. The gap it closes: a seller who arrives at
@@ -109,6 +115,12 @@ export const VERIFY_TARGETS: Record<VerifyTarget, TargetSpec> = {
       "Seller Central → Reports → Business Reports → Sales and Traffic, showing the last 12 months " +
       "with the date range visible. You may blur your store name; leave the totals readable.",
   },
+  // 🚨 RETAINED, NOT LIVE. Nothing sets `open` to "ads" any more — the
+  // button that did is commented out in VerifyAccountsSection below
+  // (FEATURE_VM_2026-08-24_comment-out-ads-connection). This spec stays
+  // live code rather than a comment so it keeps type-checking and the
+  // tests keep it honest; the copy below is still the honest copy, and
+  // must stay honest, because it is what a restore would ship.
   ads: {
     provider: "amazon-ads",
     buttonLabel: "Verify Amazon ads account",
@@ -169,10 +181,43 @@ export function VerifyAccountsSection({ profileId, onLinked }: VerifyAccountsSec
       <p>
         <button type="button" onClick={() => setOpen("seller")}>
           {VERIFY_TARGETS.seller.buttonLabel}
-        </button>{" "}
+        </button>
+        {/*
+          COMMENTED OUT ON PURPOSE — 2026-08-24, sellerconnect
+          skills/feature-dev/…/FEATURE_VM_2026-08-24_comment-out-ads-connection.
+          This is a decision, not abandoned work.
+
+          WHY IT IS OFF: linking an Amazon Ads connection to a profile did
+          nothing. The snapshot builder skips every non-SP-API provider
+          (`skipped_unsupported`), so an ads link wrote zero
+          ProfileMetricDay rows, moved no figure and could not change the
+          verification tier. The button implied work it never did. Ad spend
+          still reaches a VerifiedMargins margin — through profit_by_date,
+          which unions every ads connection owned by the same USER — so
+          nothing was lost by removing this.
+
+          The backend agrees rather than merely allowing it: ads is absent
+          from PROFILE_LINKABLE_PROVIDERS, connection-options no longer
+          offers it, and POST /v1/profiles/:id/connections answers
+          400 provider_not_supported. Uncommenting this button alone would
+          produce a button that errors.
+
+          RESTORING IT IS NOT JUST UNCOMMENTING (brief §4). It needs: ads →
+          ProfileMetricDay rows, or an explicit decision that ads earns a
+          badge and no numbers; a decision on what the public page shows
+          (TACOS and ad-spend share are far more competitively sensitive
+          than monthly revenue, so they belong behind Profile.visibility
+          with their own toggle); the backend refusal lifted; and the ads
+          OAuth start/callback re-added to the VM frontend.
+
+          Everything it needs is still here and still tested:
+          VERIFY_TARGETS.ads, the "ads" VerifyTarget, and a modal that is
+          generic over target.
+
         <button type="button" onClick={() => setOpen("ads")}>
           {VERIFY_TARGETS.ads.buttonLabel}
         </button>
+        */}
       </p>
       <PrivacyPromise />
       {open ? (
