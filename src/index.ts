@@ -87,7 +87,12 @@
 //         username, picture, connections and publishing.
 //         sellerconnect BUG_VM_2026-08-25_profile-page-not-editable-in-place.
 
-export const SHARED_PACKAGE_VERSION = "0.9.3";
+// v0.9.4: styling hooks for the VerifiedMargins brand system —
+//         `data-verification` on the tier section, `data-metric` on the
+//         figures, and a `.vm-badge` span so the two verification states
+//         differ in shape and word, not only colour. Markup only; the
+//         look lives in the host app's globals.css.
+export const SHARED_PACKAGE_VERSION = "0.9.4";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

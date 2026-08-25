@@ -111,13 +111,33 @@ function pct(n: number | null): string {
   return n === null ? "—" : `${n.toFixed(1)}%`;
 }
 
+/** Money, rounded hard: `$2.1M`, `$840K`, `$980`.
+ *
+ *  Deliberately NOT `$2,140,000.00`. These figures are a 12-month roll-up of
+ *  daily rows in several currencies, converted at a dated rate — the cents are
+ *  arithmetic, not accuracy, and printing them claims a precision the pipeline
+ *  does not have. Rounding is the honest render (BRANDING.md §4.2). */
 function money(n: number | null, currency: string): string {
   if (n === null) return "—";
   try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(n);
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      notation: "compact",
+      maximumFractionDigits: Math.abs(n) >= 1000 ? 1 : 0,
+    }).format(n);
   } catch {
-    return `${n.toFixed(2)} ${currency}`;
+    // Unknown/invalid currency code — never throw on a public page.
+    return `${Math.round(n).toLocaleString()} ${currency}`;
   }
+}
+
+/** Up to two initials for the monogram avatar. */
+function initials(name: string): string {
+  const parts = name.replace(/^[@/]/, "").split(/[\s_-]+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2);
+  return (parts[0]![0]! + parts[1]![0]!).slice(0, 2);
 }
 
 // ─── the in-place edit form ──────────────────────────────────────────
@@ -242,10 +262,27 @@ export function PublicProfileBody({
       <main data-noindex={profile.noindex ? "true" : undefined}>
         {/* The heading tracks the field as you type — that is what makes this
             feel like editing the page rather than filling in a form about it. */}
-        <h1>
-          {editing ? form.displayName || profile.username : profile.display_name ?? profile.username}
-        </h1>
-        <p>/{profile.username}</p>
+        {/* Avatar + name + handle as one block. The avatar is a MONOGRAM when
+            there is no picture, never a silhouette: most profiles here are
+            anonymous, and a wall of grey person-icons reads as an abandoned
+            product rather than a deliberate one (BRANDING.md §6). */}
+        <header data-profile-head="">
+          <span data-avatar="" aria-hidden="true">
+            {profile.avatar_url ? (
+              <img src={profile.avatar_url} alt="" />
+            ) : (
+              initials(profile.display_name ?? profile.username)
+            )}
+          </span>
+          <span>
+            <h1>
+              {editing
+                ? form.displayName || profile.username
+                : profile.display_name ?? profile.username}
+            </h1>
+            <p data-handle="">@{profile.username}</p>
+          </span>
+        </header>
         {actions ? <p data-profile-actions>{actions}</p> : null}
 
         {editing ? (
@@ -296,8 +333,30 @@ export function PublicProfileBody({
           </>
         )}
 
-        <section>
-          <h2>{profile.verification.label}</h2>
+        {/* Hooks, not styling. This package is installed by five brand apps,
+            so it emits SEMANTIC attributes — `data-verification`,
+            `data-badge`, `data-metric` — and each app decides what they look
+            like in its own CSS, the same way every component here already
+            takes its colours from the host's --accent / --border tokens. A
+            brand-specific class name in this file would ship VerifiedMargins
+            into DragonBot's bundle.
+
+            `data-state` collapses the five tiers to the two a reader actually
+            has to tell apart, because that is a fact about the data, not a
+            look — and re-deriving it per app is how two apps end up
+            disagreeing about what counts as verified. */}
+        <section data-verification={profile.verification.tier}>
+          <h2>
+            <span
+              data-badge=""
+              data-state={
+                profile.verification.tier.startsWith("verified") ? "verified" : "estimated"
+              }
+            >
+              {profile.verification.tier.startsWith("verified") ? "\u2713" : "\u25CB"}{" "}
+              {profile.verification.label}
+            </span>
+          </h2>
           <p>{profile.verification.description}</p>
           {profile.verification.verified_at ? (
             <p>
@@ -312,7 +371,9 @@ export function PublicProfileBody({
         {m.margin_pct !== null ? (
           <section>
             <h2>Margin</h2>
-            <p>{pct(m.margin_pct)}</p>
+            {/* The one number the product is named for — the host styles it
+                as the headline figure, in mono with tabular digits. */}
+            <p data-metric="headline">{pct(m.margin_pct)}</p>
             <p>
               <small>
                 {m.margin_basis === "per_sku"
@@ -368,10 +429,14 @@ export function PublicProfileBody({
           <section>
             <h2>Catalogue</h2>
             <ul>
-              {m.sku_count !== null ? <li>{m.sku_count} SKUs</li> : null}
+              {m.sku_count !== null ? (
+                <li>
+                  <b data-metric="count">{m.sku_count}</b> SKUs
+                </li>
+              ) : null}
               {m.brand_count !== null ? (
                 <li>
-                  {m.brand_count} {m.brands_label.toLowerCase()}
+                  <b data-metric="count">{m.brand_count}</b> {m.brands_label.toLowerCase()}
                 </li>
               ) : null}
               {m.category !== null ? <li>{m.category}</li> : null}
