@@ -371,7 +371,13 @@ function UsernameSection({
   profile: ProfileDetail;
   onChanged: () => Promise<void>;
 }) {
-  const [value, setValue] = useState(profile.username_is_placeholder ? "" : profile.username);
+  // Prefill with the CURRENT username even when it's the vm-… placeholder.
+  // It used to start empty in that case, which left a blank box beside a
+  // "Change" button — nothing on screen said what you'd be changing *from*,
+  // and the seller couldn't see the handle their profile already had. Showing
+  // it costs one select-all-on-focus (below) so typing still replaces it in
+  // one go rather than making them clear it first.
+  const [value, setValue] = useState(profile.username);
   const [availability, setAvailability] = useState<UsernameAvailability | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -436,7 +442,20 @@ function UsernameSection({
       )}
       <p>
         <label htmlFor="username">verifiedmargins.com/</label>
-        <input id="username" value={value} onChange={(e) => setValue(e.target.value)} />{" "}
+        <input
+          id="username"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          // Placeholder handles are prefilled but nobody wants to keep one, so
+          // focusing selects it: type and it's replaced. A real username the
+          // seller chose is left alone — selecting it would invite an
+          // accidental overwrite of something they meant to keep.
+          onFocus={
+            profile.username_is_placeholder
+              ? (e) => e.currentTarget.select()
+              : undefined
+          }
+        />{" "}
         <button
           type="button"
           onClick={submit}
