@@ -300,6 +300,10 @@ export interface PublicProfile {
       orders: number;
       profit: number | null;
     }> | null;
+    /** Ratios only, and gated on `visibility.margin` rather than
+     *  `visibility.sales` — a margin discloses no absolute figure, so a
+     *  seller can plot it with revenue private. */
+    margin_series: Array<{ month: string; margin_pct: number | null }> | null;
     margin_pct: number | null;
     margin_basis: string | null;
     margin_note: string | null;

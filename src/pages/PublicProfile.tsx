@@ -41,6 +41,8 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ApiError } from "../api";
+import { StatTile } from "../components/ui/StatTile";
+import { TrendChart } from "../components/ui/TrendChart";
 import {
   SELLER_TYPES,
   SOCIAL_FIELDS,
@@ -138,6 +140,120 @@ function initials(name: string): string {
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0]!.slice(0, 2);
   return (parts[0]![0]! + parts[1]![0]!).slice(0, 2);
+}
+
+
+// ─── the metrics dashboard ───────────────────────────────────────────
+//
+// Tiles + one chart, the same shape as the DragonBot dashboard
+// (DashboardMetrics.tsx) and built from the same two primitives, so there is
+// no second charting implementation to keep in step.
+//
+// TWO THINGS THIS PAGE DOES DIFFERENTLY, both because it is PUBLIC:
+//
+//   1. It plots what the seller published and nothing else. A tile appears
+//      only if its visibility toggle is on; `margin` and `sales` are separate
+//      toggles, so a margin-only profile still gets a chart — from
+//      `margin_series`, which carries ratios and no absolutes.
+//   2. NO COMPARISON SERIES. The dashboard shows the previous period dashed
+//      behind the current one; here that would publish a second window the
+//      seller never chose to publish. One window, the one they picked.
+//
+// Colour: the chart inherits the app's `--chart-accent`, which the brand
+// deliberately points at ink rather than the verified green. Green on this
+// product is a claim about provenance, not decoration — a revenue line is not
+// a verification, and spending the badge colour on it would blunt the badge
+// (verifiedmargins-frontend/BRANDING.md §3.1).
+
+type PlotKey = "revenue" | "profit" | "units" | "margin";
+
+function ProfileDashboard({
+  metrics,
+  windowMonths,
+}: {
+  metrics: PublicProfile["metrics"];
+  windowMonths: number;
+}) {
+  const series = metrics.series;
+  const marginSeries = metrics.margin_series;
+  const currency = metrics.display?.currency ?? "USD";
+
+  // What the seller actually published decides what can be plotted.
+  const plots: Array<{ key: PlotKey; label: string; format: (v: number | null) => string }> = [];
+  if (series) {
+    plots.push({ key: "revenue", label: "Revenue", format: (v) => money(v, currency) });
+    if (series.some((p) => p.profit !== null)) {
+      plots.push({ key: "profit", label: "Profit", format: (v) => money(v, currency) });
+    }
+    plots.push({ key: "units", label: "Units", format: (v) => (v === null ? "—" : Math.round(v).toLocaleString()) });
+  }
+  if (marginSeries) {
+    plots.push({ key: "margin", label: "Margin", format: pct });
+  }
+  const [plot, setPlot] = useState<PlotKey>(() => (marginSeries ? "margin" : "revenue"));
+  const active = plots.find((p) => p.key === plot) ?? plots[0];
+  if (!active) return null;
+
+  const points =
+    active.key === "margin"
+      ? (marginSeries ?? []).map((p) => ({ date: `${p.month}-01`, value: p.margin_pct }))
+      : (series ?? []).map((p) => ({
+          date: `${p.month}-01`,
+          value:
+            active.key === "revenue" ? p.revenue : active.key === "profit" ? p.profit : p.units,
+        }));
+
+  const spark = (key: PlotKey): Array<number | null> | undefined => {
+    if (key === "margin") return marginSeries?.map((p) => p.margin_pct);
+    if (!series) return undefined;
+    return series.map((p) => (key === "revenue" ? p.revenue : key === "profit" ? p.profit : p.units));
+  };
+
+  return (
+    <section data-profile-dashboard="">
+      <h2>Last {windowMonths} months</h2>
+
+      <div data-tiles="">
+        {plots.map((p) => (
+          <StatTile
+            key={p.key}
+            label={p.label}
+            value={
+              p.key === "margin"
+                ? pct(metrics.margin_pct)
+                : p.key === "revenue"
+                  ? money(metrics.display?.revenue ?? null, currency)
+                  : p.key === "profit"
+                    ? money(metrics.display?.profit ?? null, currency)
+                    : (series ?? []).reduce((n, x) => n + x.units, 0).toLocaleString()
+            }
+            /* No delta chip: a period-over-period change needs a previous
+               period, and publishing one the seller did not choose to publish
+               is the same mistake as a comparison line. */
+            delta={null}
+            spark={spark(p.key)}
+            selected={p.key === plot}
+            onClick={() => setPlot(p.key)}
+          />
+        ))}
+      </div>
+
+      <div data-chart="">
+        <TrendChart
+          points={points}
+          format={active.format}
+          label={active.label}
+          formatDate={(iso) =>
+            new Date(iso).toLocaleDateString(undefined, {
+              month: "short",
+              year: "2-digit",
+              timeZone: "UTC",
+            })
+          }
+        />
+      </div>
+    </section>
+  );
 }
 
 // ─── the in-place edit form ──────────────────────────────────────────
@@ -368,11 +484,12 @@ export function PublicProfileBody({
           {profile.verification.note ? <p>{profile.verification.note}</p> : null}
         </section>
 
+        {/* The headline figure stays ABOVE the dashboard: it is the number
+            the product is named for, and a visitor who reads nothing else
+            should still leave with it. */}
         {m.margin_pct !== null ? (
           <section>
             <h2>Margin</h2>
-            {/* The one number the product is named for — the host styles it
-                as the headline figure, in mono with tabular digits. */}
             <p data-metric="headline">{pct(m.margin_pct)}</p>
             <p>
               <small>
@@ -387,9 +504,16 @@ export function PublicProfileBody({
         ) : null}
         {m.margin_note ? <p>{m.margin_note}</p> : null}
 
+        {m.series || m.margin_series ? (
+          <ProfileDashboard metrics={m} windowMonths={profile.window.months} />
+        ) : null}
+
         {m.display ? (
           <section>
-            <h2>Last {profile.window.months} months</h2>
+            {/* The tiles carry the headline figures; this is the breakdown
+                underneath them — fees and COGS are the numbers a seller is
+                actually asked to prove, and they do not fit in a tile. */}
+            <h2>Breakdown</h2>
             <dl>
               <dt>Revenue</dt>
               <dd>{money(m.display.revenue, m.display.currency)}</dd>

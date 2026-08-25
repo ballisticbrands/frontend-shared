@@ -92,7 +92,11 @@
 //         figures, and a `.vm-badge` span so the two verification states
 //         differ in shape and word, not only colour. Markup only; the
 //         look lives in the host app's globals.css.
-export const SHARED_PACKAGE_VERSION = "0.9.4";
+// v0.9.5: the public profile gets a dashboard — StatTile + TrendChart,
+//         the same primitives DashboardMetrics uses, plus margin_series
+//         so a margin-public/revenue-private profile can still plot a
+//         trend that discloses no absolute figure.
+export const SHARED_PACKAGE_VERSION = "0.9.5";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
