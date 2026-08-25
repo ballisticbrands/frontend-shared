@@ -72,7 +72,22 @@
 //         live and tested so restoring it is an edit, not a rewrite.
 //         sellerconnect FEATURE_VM_2026-08-24_comment-out-ads-connection.
 
-export const SHARED_PACKAGE_VERSION = "0.9.2";
+// v0.9.3: your own profile page IS the editor. PublicProfilePage takes an
+//         `owner` slot ({ profileId, published, actions }); with it set, the
+//         page sources its payload from GET /v1/profiles/:id/preview instead
+//         of the public endpoint — the SAME builder, so what the owner sees
+//         is definitionally what the world sees, and an UNPUBLISHED profile
+//         renders for its owner without /:username becoming an existence
+//         oracle for anyone else. The owner bar sits OUTSIDE <main>, so the
+//         public render is byte-identical for a stranger (pinned by
+//         test/public-profile-owner.test.mjs); edit mode swaps the six fields
+//         the payload already carries — display name, bio, seller type,
+//         website, socials, visibility — for inputs in place. No endpoint was
+//         widened and no public field was added; ProfileSettingsPage keeps
+//         username, picture, connections and publishing.
+//         sellerconnect BUG_VM_2026-08-25_profile-page-not-editable-in-place.
+
+export const SHARED_PACKAGE_VERSION = "0.9.3";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -318,4 +333,4 @@ export type {
 export { ProfileSettingsPage } from "./pages/ProfileSettings";
 export type { ProfileSettingsPageProps } from "./pages/ProfileSettings";
 export { PublicProfilePage } from "./pages/PublicProfile";
-export type { PublicProfilePageProps } from "./pages/PublicProfile";
+export type { ProfileOwnerProps, PublicProfilePageProps } from "./pages/PublicProfile";
