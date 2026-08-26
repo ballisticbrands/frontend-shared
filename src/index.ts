@@ -103,7 +103,11 @@
 // v0.9.7: business rows carry `markets`, because a seller with a US and an
 //         EU Amazon account had two identical "Amazon FBA" rows and no way
 //         to tell which figure was which.
-export const SHARED_PACKAGE_VERSION = "0.9.7";
+// v0.9.8: the profile takes the trustmrr founder-page shape — handle beside
+//         the name, share button, links in the identity block, and
+//         "Businesses by <name>" as cards with a platform mark, a blurred
+//         brand name and 30-day figures.
+export const SHARED_PACKAGE_VERSION = "0.9.8";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

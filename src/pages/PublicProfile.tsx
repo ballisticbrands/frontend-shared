@@ -169,48 +169,161 @@ function socialUrl(key: string, value: string): string {
   return base[key] ? `${base[key]}${handle}` : value;
 }
 
-/** The businesses strip: one row per linked platform, its size, and its own
- *  badge. Per connection rather than per profile — a synced Amazon account
- *  and a typed-in legacy business have different claims behind them, and one
- *  badge over both either flatters the weaker or maligns the stronger. */
+
+/** Copy-the-link, with the clipboard API's failure handled rather than
+ *  assumed: it rejects on http origins and in some embedded webviews, and a
+ *  Share button that silently does nothing is worse than one that offers the
+ *  URL to copy by hand. */
+function ShareButton({ username }: { username: string }) {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+  const url = typeof window !== "undefined" ? window.location.href : `/${username}`;
+  return (
+    <button
+      type="button"
+      data-share=""
+      onClick={() => {
+        navigator.clipboard
+          ?.writeText(url)
+          .then(() => setState("copied"))
+          .catch(() => setState("failed"));
+        window.setTimeout(() => setState("idle"), 2_500);
+      }}
+      title={state === "failed" ? url : undefined}
+    >
+      {state === "copied" ? "Link copied" : state === "failed" ? "Copy failed" : "Share"}
+    </button>
+  );
+}
+
+/** Platform mark. An inline SVG rather than a hosted image: the profile page
+ *  is prerendered and shared as a link, and a third-party logo URL is a
+ *  request we do not control and a mixed-content risk we do not need. */
+function PlatformMark({ platform }: { platform: string }) {
+  if (platform === "amazon_selling_partner" || platform === "amazon_ads") {
+    return (
+      <span data-business-mark="" data-platform="amazon" aria-label="Amazon">
+        {/* The smile, drawn rather than fetched: a hosted logo is a
+            third-party request on a page we prerender and people share, and
+            monochrome keeps a competitor's brand colour off a palette whose
+            whole argument is that green means one thing. */}
+        <svg viewBox="0 0 64 40" width="30" height="20" role="img" aria-hidden="true">
+          <path
+            d="M3 26c8.6 6.2 19.4 9.3 29 9.3 6.6 0 13.9-1.4 20.7-4.2"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="4.6"
+            strokeLinecap="round"
+          />
+          <path d="M49.5 27.4l9.5-3.1-2.2 9.7z" fill="currentColor" />
+          <path
+            d="M14 15.5c0-2.6 1.9-4.3 4.6-4.3 1.6 0 3 .6 3.9 1.7"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3.4"
+            strokeLinecap="round"
+          />
+        </svg>
+      </span>
+    );
+  }
+  return (
+    <span data-business-mark="" data-platform={platform} aria-hidden="true">
+      {"\u25A0"}
+    </span>
+  );
+}
+
+const SELLER_TYPE_LABEL: Record<string, string> = {
+  private_label: "Private label",
+  wholesaler: "Wholesale",
+  dropshipper: "Dropshipping",
+};
+
+/** One business card.
+ *
+ *  🚨 THE NAME IS DELIBERATELY UNREADABLE. Sellers will be able to reveal
+ *  their brand in a later update; until then the card shows a blurred
+ *  placeholder rather than omitting the line, so the layout is the one they
+ *  will eventually get and the hiding reads as a CHOICE rather than as
+ *  missing data. Nothing identifying is sent to the browser to blur — the
+ *  payload has never carried the brand name, so this is a placeholder string
+ *  with a filter on it, not a redaction someone can peel off in devtools. */
+function BusinessCard({
+  business,
+  currency,
+}: {
+  business: PublicProfile["metrics"]["businesses"][number];
+  currency: string;
+}) {
+  const sub = [business.label, business.seller_type ? SELLER_TYPE_LABEL[business.seller_type] : null]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <article data-business="">
+      <PlatformMark platform={business.platform} />
+      <div data-business-body="">
+        <div data-business-head="">
+          <span data-business-name="" data-blurred="" aria-label="Business name hidden">
+            Stealth Brand
+          </span>
+          {business.verification.tier.startsWith("verified") ? (
+            <span data-badge="" data-state="verified">
+              {"\u2713"} {business.verification.label}
+            </span>
+          ) : (
+            <span data-badge="" data-state="estimated">
+              {"\u25CB"} {business.verification.label}
+            </span>
+          )}
+        </div>
+        <p data-business-sub="">
+          {sub}
+          {business.markets.length > 0 ? (
+            <span data-business-markets=""> · {business.markets.join(" · ")}</span>
+          ) : null}
+        </p>
+        <dl data-business-stats="">
+          <div>
+            <dt>Revenue (30d)</dt>
+            <dd data-metric="">{money(business.last_30d.revenue, currency)}</dd>
+          </div>
+          <div>
+            <dt>Margin %</dt>
+            <dd data-metric="">{pct(business.last_30d.margin_pct)}</dd>
+          </div>
+          <div>
+            <dt>Profit (30d)</dt>
+            <dd data-metric="">{money(business.last_30d.profit, currency)}</dd>
+          </div>
+        </dl>
+      </div>
+    </article>
+  );
+}
+
+/** "Businesses by <name>" — the trustmrr founder-page shape: a titled
+ *  section of cards, one per linked business. Per connection, so a synced
+ *  Amazon account and a typed-in one carry their own badges side by side. */
 function Businesses({
   rows,
   currency,
+  ownerName,
 }: {
   rows: PublicProfile["metrics"]["businesses"];
   currency: string;
+  ownerName: string;
 }) {
   if (!rows || rows.length === 0) return null;
   return (
     <section data-profile-businesses="">
+      <h2>Businesses by {ownerName}</h2>
       {rows.map((b) => (
-        <div key={b.platform} data-business="">
-          <span data-business-name="">{b.label}</span>
-          {/* Two connections on one platform are otherwise identical rows.
-              Marketplaces disambiguate them without naming either account. */}
-          {b.markets.length > 0 ? (
-            <span data-business-markets="">{b.markets.join(" · ")}</span>
-          ) : null}
-          {b.verification.tier.startsWith("verified") ? (
-            <span data-badge="" data-state="verified">
-              {"\u2713"} {b.verification.label}
-            </span>
-          ) : (
-            <span data-badge="" data-state="estimated">
-              {"\u25CB"} {b.verification.label}
-            </span>
-          )}
-          <span data-business-figures="">
-            {b.revenue !== null ? <b data-metric="">{money(b.revenue, currency)}</b> : null}
-            {b.margin_pct !== null ? (
-              <b data-metric="">{pct(b.margin_pct)} margin</b>
-            ) : null}
-          </span>
-        </div>
+        <BusinessCard key={`${b.platform}-${b.markets.join(",")}`} business={b} currency={currency} />
       ))}
     </section>
   );
 }
+
 
 // ─── the metrics dashboard ───────────────────────────────────────────
 //
@@ -459,14 +572,18 @@ export function PublicProfileBody({
               initials(profile.display_name ?? profile.username)
             )}
           </span>
-          <span>
+          <span data-profile-identity="">
             <h1>
               {editing
                 ? form.displayName || profile.username
                 : profile.display_name ?? profile.username}
+              {/* Handle sits BESIDE the name, not under it: it is the thing
+                  people paste into a URL, and stacking it reads as a subtitle
+                  rather than as an address. */}
+              <span data-handle="">@{profile.username}</span>
             </h1>
-            <p data-handle="">@{profile.username}</p>
           </span>
+          <ShareButton username={profile.username} />
         </header>
         {actions ? <p data-profile-actions>{actions}</p> : null}
 
@@ -522,11 +639,9 @@ export function PublicProfileBody({
           <>{profile.bio ? <p>{profile.bio}</p> : null}</>
         )}
 
-        {/* Social-media order: who → what they run → where to find them.
-            The businesses strip is the "what", and it is the reason someone
-            is on this page. */}
-        <Businesses rows={m.businesses} currency={m.display?.currency ?? "USD"} />
-
+        {/* Links live in the identity block, beside who this is — the
+            trustmrr founder-page shape. They are how you check someone out,
+            so they belong next to the name rather than after their numbers. */}
         {profile.website_url || Object.keys(profile.socials).length > 0 ? (
           <section data-profile-socials="">
             {profile.website_url ? (
@@ -547,6 +662,13 @@ export function PublicProfileBody({
             ))}
           </section>
         ) : null}
+
+        {/* Then what they run. This is the reason someone is on the page. */}
+        <Businesses
+          rows={m.businesses}
+          currency={m.display?.currency ?? "USD"}
+          ownerName={profile.display_name ?? `@${profile.username}`}
+        />
 
         {/* The headline figure stays ABOVE the dashboard: it is the number
             the product is named for, and a visitor who reads nothing else

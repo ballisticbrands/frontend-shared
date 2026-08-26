@@ -313,6 +313,8 @@ export interface PublicProfile {
       label: string;
       /** Marketplace codes — what tells two Amazon connections apart. */
       markets: string[];
+      seller_type: string | null;
+      last_30d: { revenue: number | null; profit: number | null; margin_pct: number | null };
       revenue: number | null;
       margin_pct: number | null;
       verification: { tier: string; label: string };
