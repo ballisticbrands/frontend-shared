@@ -186,6 +186,11 @@ function Businesses({
       {rows.map((b) => (
         <div key={b.platform} data-business="">
           <span data-business-name="">{b.label}</span>
+          {/* Two connections on one platform are otherwise identical rows.
+              Marketplaces disambiguate them without naming either account. */}
+          {b.markets.length > 0 ? (
+            <span data-business-markets="">{b.markets.join(" · ")}</span>
+          ) : null}
           {b.verification.tier.startsWith("verified") ? (
             <span data-badge="" data-state="verified">
               {"\u2713"} {b.verification.label}

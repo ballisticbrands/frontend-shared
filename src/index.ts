@@ -100,7 +100,10 @@
 //         businesses someone runs (each with its OWN badge), links, then
 //         the dashboard. Drops the profile-wide verification explainer and
 //         the self-declared seller-type tag.
-export const SHARED_PACKAGE_VERSION = "0.9.6";
+// v0.9.7: business rows carry `markets`, because a seller with a US and an
+//         EU Amazon account had two identical "Amazon FBA" rows and no way
+//         to tell which figure was which.
+export const SHARED_PACKAGE_VERSION = "0.9.7";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

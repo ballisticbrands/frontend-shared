@@ -311,6 +311,8 @@ export interface PublicProfile {
     businesses: Array<{
       platform: string;
       label: string;
+      /** Marketplace codes — what tells two Amazon connections apart. */
+      markets: string[];
       revenue: number | null;
       margin_pct: number | null;
       verification: { tier: string; label: string };
