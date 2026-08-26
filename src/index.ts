@@ -113,7 +113,9 @@
 //         breakdown, catalogue, notes and window/currency blocks.
 // v0.9.10: the dashboard opens on revenue, and the "margin is hidden"
 //          note is shown to the profile's OWNER only.
-export const SHARED_PACKAGE_VERSION = "0.9.10";
+// v0.9.11: profile links stack and name their destination —
+//          "Visit 𝕏 profile ↗" rather than a bare glyph.
+export const SHARED_PACKAGE_VERSION = "0.9.11";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

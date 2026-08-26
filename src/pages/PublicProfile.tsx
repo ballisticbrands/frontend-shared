@@ -216,6 +216,20 @@ const SOCIAL_ICON: Record<string, JSX.Element> = {
   ),
 };
 
+/** The "this leaves the site" mark. Trustmrr puts one on every outbound
+ *  profile link, and it is worth copying: on a page whose whole job is to be
+ *  credible, a visitor should know before they click whether they are staying
+ *  with us or being handed to X. */
+function ExternalIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+      strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 4.5h5.5V10M19 5l-8 8" />
+      <path d="M18 14.5v4A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6h4" />
+    </svg>
+  );
+}
+
 function ShareIcon() {
   return (
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7"
@@ -666,14 +680,17 @@ export function PublicProfileBody({
             ) : null}
           </span>
 
-          {/* Share and the links share one row: they are the same kind of
-              thing — ways to take this profile somewhere else. */}
+          {/* A STACK, not a row of icons. "Visit 𝕏 profile" tells a reader
+              where a click goes; a bare glyph makes them hover to find out,
+              and this is the part of the page where someone decides whether
+              to trust the person. Each outbound link carries the
+              leaves-the-site mark for the same reason. */}
           <span data-profile-actions-row="">
             <ShareButton username={profile.username} />
             {profile.website_url ? (
-              <a href={profile.website_url} rel="nofollow noopener" data-social-link=""
-                 title="Website" aria-label="Website">
-                {SOCIAL_ICON.website}
+              <a href={profile.website_url} rel="nofollow noopener" data-social-link="">
+                <span data-social-label="">Visit {SOCIAL_ICON.website} website</span>
+                <ExternalIcon />
               </a>
             ) : null}
             {Object.entries(profile.socials).map(([key, value]) => (
@@ -683,10 +700,11 @@ export function PublicProfileBody({
                 target="_blank"
                 rel="noopener noreferrer nofollow"
                 data-social-link=""
-                title={SOCIAL_LABEL[key] ?? key}
-                aria-label={SOCIAL_LABEL[key] ?? key}
               >
-                {SOCIAL_ICON[key] ?? <span>{SOCIAL_LABEL[key] ?? key}</span>}
+                <span data-social-label="">
+                  Visit {SOCIAL_ICON[key] ?? <b>{SOCIAL_LABEL[key] ?? key}</b>} profile
+                </span>
+                <ExternalIcon />
               </a>
             ))}
           </span>
