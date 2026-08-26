@@ -96,7 +96,11 @@
 //         the same primitives DashboardMetrics uses, plus margin_series
 //         so a margin-public/revenue-private profile can still plot a
 //         trend that discloses no absolute figure.
-export const SHARED_PACKAGE_VERSION = "0.9.5";
+// v0.9.6: the profile reads like a social profile — name, bio, the
+//         businesses someone runs (each with its OWN badge), links, then
+//         the dashboard. Drops the profile-wide verification explainer and
+//         the self-declared seller-type tag.
+export const SHARED_PACKAGE_VERSION = "0.9.6";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

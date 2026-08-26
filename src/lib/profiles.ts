@@ -304,6 +304,17 @@ export interface PublicProfile {
      *  `visibility.sales` — a margin discloses no absolute figure, so a
      *  seller can plot it with revenue private. */
     margin_series: Array<{ month: string; margin_pct: number | null }> | null;
+    /** One row per linked business. `label` is a PLATFORM ("Amazon FBA"),
+     *  never the seller's account name, and the badge is per connection —
+     *  a synced Amazon account and a typed-in legacy business must not share
+     *  one verdict. */
+    businesses: Array<{
+      platform: string;
+      label: string;
+      revenue: number | null;
+      margin_pct: number | null;
+      verification: { tier: string; label: string };
+    }>;
     margin_pct: number | null;
     margin_basis: string | null;
     margin_note: string | null;

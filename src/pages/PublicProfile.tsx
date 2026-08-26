@@ -143,6 +143,70 @@ function initials(name: string): string {
 }
 
 
+
+
+/** Platform labels + handle→URL, so a typed handle becomes a real link. */
+const SOCIAL_LABEL: Record<string, string> = {
+  x: "X",
+  reddit: "Reddit",
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  facebook: "Facebook",
+};
+
+function socialUrl(key: string, value: string): string {
+  if (value.startsWith("http")) return value;
+  const handle = value.replace(/^@/, "").replace(/^u\//, "");
+  const base: Record<string, string> = {
+    x: "https://x.com/",
+    reddit: "https://reddit.com/user/",
+    linkedin: "https://linkedin.com/in/",
+    instagram: "https://instagram.com/",
+    tiktok: "https://tiktok.com/@",
+    facebook: "https://facebook.com/",
+  };
+  return base[key] ? `${base[key]}${handle}` : value;
+}
+
+/** The businesses strip: one row per linked platform, its size, and its own
+ *  badge. Per connection rather than per profile — a synced Amazon account
+ *  and a typed-in legacy business have different claims behind them, and one
+ *  badge over both either flatters the weaker or maligns the stronger. */
+function Businesses({
+  rows,
+  currency,
+}: {
+  rows: PublicProfile["metrics"]["businesses"];
+  currency: string;
+}) {
+  if (!rows || rows.length === 0) return null;
+  return (
+    <section data-profile-businesses="">
+      {rows.map((b) => (
+        <div key={b.platform} data-business="">
+          <span data-business-name="">{b.label}</span>
+          {b.verification.tier.startsWith("verified") ? (
+            <span data-badge="" data-state="verified">
+              {"\u2713"} {b.verification.label}
+            </span>
+          ) : (
+            <span data-badge="" data-state="estimated">
+              {"\u25CB"} {b.verification.label}
+            </span>
+          )}
+          <span data-business-figures="">
+            {b.revenue !== null ? <b data-metric="">{money(b.revenue, currency)}</b> : null}
+            {b.margin_pct !== null ? (
+              <b data-metric="">{pct(b.margin_pct)} margin</b>
+            ) : null}
+          </span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 // ─── the metrics dashboard ───────────────────────────────────────────
 //
 // Tiles + one chart, the same shape as the DragonBot dashboard
@@ -443,46 +507,41 @@ export function PublicProfileBody({
             </p>
           </div>
         ) : (
-          <>
-            {profile.bio ? <p>{profile.bio}</p> : null}
-            {profile.seller_type ? <p>{profile.seller_type.replace(/_/g, " ")}</p> : null}
-          </>
+          /* Bio only. The seller-type tag ("private label") was here and is
+             deliberately gone: it is a self-declared label sitting inches
+             from figures we verified, and it needs a home that does not
+             borrow their credibility. Same for the verification explainer
+             that used to follow — per-business badges replaced the
+             profile-wide one, so the paragraph explaining a single tier had
+             nothing left to explain. */
+          <>{profile.bio ? <p>{profile.bio}</p> : null}</>
         )}
 
-        {/* Hooks, not styling. This package is installed by five brand apps,
-            so it emits SEMANTIC attributes — `data-verification`,
-            `data-badge`, `data-metric` — and each app decides what they look
-            like in its own CSS, the same way every component here already
-            takes its colours from the host's --accent / --border tokens. A
-            brand-specific class name in this file would ship VerifiedMargins
-            into DragonBot's bundle.
+        {/* Social-media order: who → what they run → where to find them.
+            The businesses strip is the "what", and it is the reason someone
+            is on this page. */}
+        <Businesses rows={m.businesses} currency={m.display?.currency ?? "USD"} />
 
-            `data-state` collapses the five tiers to the two a reader actually
-            has to tell apart, because that is a fact about the data, not a
-            look — and re-deriving it per app is how two apps end up
-            disagreeing about what counts as verified. */}
-        <section data-verification={profile.verification.tier}>
-          <h2>
-            <span
-              data-badge=""
-              data-state={
-                profile.verification.tier.startsWith("verified") ? "verified" : "estimated"
-              }
-            >
-              {profile.verification.tier.startsWith("verified") ? "\u2713" : "\u25CB"}{" "}
-              {profile.verification.label}
-            </span>
-          </h2>
-          <p>{profile.verification.description}</p>
-          {profile.verification.verified_at ? (
-            <p>
-              <small>
-                Last verified {new Date(profile.verification.verified_at).toLocaleDateString()}
-              </small>
-            </p>
-          ) : null}
-          {profile.verification.note ? <p>{profile.verification.note}</p> : null}
-        </section>
+        {profile.website_url || Object.keys(profile.socials).length > 0 ? (
+          <section data-profile-socials="">
+            {profile.website_url ? (
+              <a href={profile.website_url} rel="nofollow noopener" data-social-link="">
+                Website
+              </a>
+            ) : null}
+            {Object.entries(profile.socials).map(([key, value]) => (
+              <a
+                key={key}
+                href={socialUrl(key, value)}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                data-social-link=""
+              >
+                {SOCIAL_LABEL[key] ?? key}
+              </a>
+            ))}
+          </section>
+        ) : null}
 
         {/* The headline figure stays ABOVE the dashboard: it is the number
             the product is named for, and a visitor who reads nothing else
@@ -629,24 +688,6 @@ export function PublicProfileBody({
                 />
               </p>
             ))}
-          </section>
-        ) : profile.website_url || Object.keys(profile.socials).length > 0 ? (
-          <section>
-            <h2>Links</h2>
-            <ul>
-              {profile.website_url ? (
-                <li>
-                  <a href={profile.website_url} rel="nofollow noopener">
-                    {profile.website_url}
-                  </a>
-                </li>
-              ) : null}
-              {Object.entries(profile.socials).map(([key, value]) => (
-                <li key={key}>
-                  {key}: {value}
-                </li>
-              ))}
-            </ul>
           </section>
         ) : null}
 
