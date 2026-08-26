@@ -170,6 +170,64 @@ function socialUrl(key: string, value: string): string {
 }
 
 
+
+/** Marks for the action row. Inline and monochrome: a hosted brand icon is a
+ *  third-party request on a page we prerender and people share, and colour
+ *  logos on a palette whose whole argument is restraint would each shout
+ *  louder than the verification badge. */
+const SOCIAL_ICON: Record<string, JSX.Element> = {
+  x: (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+      <path d="M17.5 3h3.2l-7 8 8.2 10h-6.4l-5-6.1-5.7 6.1H1.6l7.5-8.6L1.2 3h6.6l4.5 5.6zm-1.1 16.1h1.8L7.7 4.8H5.8z" />
+    </svg>
+  ),
+  reddit: (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+      <path d="M22 11.8a2.2 2.2 0 0 0-3.7-1.6 10.8 10.8 0 0 0-5.5-1.7l.9-4.2 2.9.6a1.6 1.6 0 1 0 .2-1l-3.5-.7a.5.5 0 0 0-.6.4l-1.1 5a10.8 10.8 0 0 0-5.6 1.7 2.2 2.2 0 1 0-2.4 3.6 4 4 0 0 0 0 .6c0 3.1 3.6 5.6 8.1 5.6s8.1-2.5 8.1-5.6a4 4 0 0 0 0-.6 2.2 2.2 0 0 0 1.2-2.1zM7.5 13.3a1.6 1.6 0 1 1 1.6 1.6 1.6 1.6 0 0 1-1.6-1.6zm8.9 4.2a5.9 5.9 0 0 1-3.9 1.2 5.9 5.9 0 0 1-3.9-1.2.5.5 0 0 1 .7-.7 5 5 0 0 0 3.2.9 5 5 0 0 0 3.2-.9.5.5 0 0 1 .7.7zm-.5-2.6a1.6 1.6 0 1 1 1.6-1.6 1.6 1.6 0 0 1-1.6 1.6z" />
+    </svg>
+  ),
+  linkedin: (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+      <path d="M4.98 3.5A2.5 2.5 0 1 1 2.5 6 2.5 2.5 0 0 1 4.98 3.5zM3 8.98h4v12H3zm6.5 0h3.8v1.64h.05a4.2 4.2 0 0 1 3.78-2.08c4 0 4.77 2.63 4.77 6.05v6.4h-4v-5.68c0-1.35 0-3.1-1.9-3.1s-2.18 1.48-2.18 3v5.78h-4z" />
+    </svg>
+  ),
+  instagram: (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4.5" />
+      <circle cx="12" cy="12" r="3.8" />
+      <circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  tiktok: (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+      <path d="M16.5 2h-3v13.2a2.6 2.6 0 1 1-2.2-2.6V9.5a5.8 5.8 0 1 0 5.2 5.8V8.9a6.7 6.7 0 0 0 3.9 1.2V7.1a3.9 3.9 0 0 1-3.9-3.9z" />
+    </svg>
+  ),
+  facebook: (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+      <path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.6a22 22 0 0 0-2.4-.12c-2.38 0-4 1.45-4 4.11V9.9H7.6V13h2.7v8z" />
+    </svg>
+  ),
+  website: (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.5 12h17M12 3.5c2.2 2.3 3.4 5.3 3.4 8.5S14.2 18.2 12 20.5c-2.2-2.3-3.4-5.3-3.4-8.5S9.8 5.8 12 3.5z" />
+    </svg>
+  ),
+};
+
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="18" cy="5.5" r="2.6" />
+      <circle cx="6" cy="12" r="2.6" />
+      <circle cx="18" cy="18.5" r="2.6" />
+      <path d="M8.3 10.8l7.4-4M8.3 13.2l7.4 4" />
+    </svg>
+  );
+}
+
 /** Copy-the-link, with the clipboard API's failure handled rather than
  *  assumed: it rejects on http origins and in some embedded webviews, and a
  *  Share button that silently does nothing is worse than one that offers the
@@ -190,7 +248,8 @@ function ShareButton({ username }: { username: string }) {
       }}
       title={state === "failed" ? url : undefined}
     >
-      {state === "copied" ? "Link copied" : state === "failed" ? "Copy failed" : "Share"}
+      <ShareIcon />
+      <span>{state === "copied" ? "Link copied" : state === "failed" ? "Copy failed" : "Share"}</span>
     </button>
   );
 }
@@ -393,7 +452,12 @@ function ProfileDashboard({
 
   return (
     <section data-profile-dashboard="">
-      <h2>Last {windowMonths} months</h2>
+      {/* 🚨 THE HEADING AND THE TILES MUST AGREE. The tiles carry the trailing
+          30 days, so the heading says 30 days. The CHART underneath is
+          monthly and spans the whole window — it gets its own label rather
+          than sitting silently under a "Last 30 days" heading, which would
+          make the page lie about its own axis. */}
+      <h2>Last 30 days</h2>
 
       <div data-tiles="">
         {plots.map((p) => (
@@ -402,12 +466,12 @@ function ProfileDashboard({
             label={p.label}
             value={
               p.key === "margin"
-                ? pct(metrics.margin_pct)
+                ? pct(metrics.last_30d?.margin_pct ?? null)
                 : p.key === "revenue"
-                  ? money(metrics.display?.revenue ?? null, currency)
+                  ? money(metrics.last_30d?.revenue ?? null, currency)
                   : p.key === "profit"
-                    ? money(metrics.display?.profit ?? null, currency)
-                    : (series ?? []).reduce((n, x) => n + x.units, 0).toLocaleString()
+                    ? money(metrics.last_30d?.profit ?? null, currency)
+                    : (metrics.last_30d?.units ?? 0).toLocaleString()
             }
             /* No delta chip: a period-over-period change needs a previous
                period, and publishing one the seller did not choose to publish
@@ -420,6 +484,9 @@ function ProfileDashboard({
         ))}
       </div>
 
+      <p data-chart-label="">
+        <small>{active.label} by month, last {windowMonths} months</small>
+      </p>
       <div data-chart="">
         <TrendChart
           points={points}
@@ -487,10 +554,9 @@ export interface PublicProfileBodyProps {
   /** A save confirmation, or the server's own error text, shown in the bar
    *  beside the button that caused it. */
   status?: string | null;
-  months: number;
-  currency: string;
-  onMonths?: (months: number) => void;
-  onCurrency?: (currency: string) => void;
+  /* The window/currency SELECTORS are gone (the "Show" block came off the
+     page), so the body no longer takes them. The page still fetches with a
+     window and a currency — those live in PublicProfilePage's own state. */
 }
 
 /**
@@ -512,12 +578,13 @@ export function PublicProfileBody({
   onSave,
   saving,
   status,
-  months,
-  currency,
-  onMonths,
-  onCurrency,
 }: PublicProfileBodyProps) {
   const m = profile.metrics;
+  // Businesses whose revenue came from a connected account rather than a
+  // typed-in one — the number the header leads with.
+  const verifiedCount = (m.businesses ?? []).filter((b) =>
+    b.verification.tier.startsWith("verified"),
+  ).length;
   const editing = form != null;
   const patch = <K extends keyof ProfileEditForm>(key: K, value: ProfileEditForm[K]) => {
     if (form && onForm) onForm({ ...form, [key]: value });
@@ -582,8 +649,42 @@ export function PublicProfileBody({
                   rather than as an address. */}
               <span data-handle="">@{profile.username}</span>
             </h1>
+            {/* What this person actually has, in one line. The count is of
+                businesses whose REVENUE we verified — not of businesses —
+                because "3 businesses" says nothing a reader can trust, and
+                that distinction is the entire product. */}
+            {verifiedCount > 0 ? (
+              <p data-verified-count="">
+                {verifiedCount} {verifiedCount === 1 ? "business" : "businesses"} with verified
+                revenue
+              </p>
+            ) : null}
           </span>
-          <ShareButton username={profile.username} />
+
+          {/* Share and the links share one row: they are the same kind of
+              thing — ways to take this profile somewhere else. */}
+          <span data-profile-actions-row="">
+            <ShareButton username={profile.username} />
+            {profile.website_url ? (
+              <a href={profile.website_url} rel="nofollow noopener" data-social-link=""
+                 title="Website" aria-label="Website">
+                {SOCIAL_ICON.website}
+              </a>
+            ) : null}
+            {Object.entries(profile.socials).map(([key, value]) => (
+              <a
+                key={key}
+                href={socialUrl(key, value)}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                data-social-link=""
+                title={SOCIAL_LABEL[key] ?? key}
+                aria-label={SOCIAL_LABEL[key] ?? key}
+              >
+                {SOCIAL_ICON[key] ?? <span>{SOCIAL_LABEL[key] ?? key}</span>}
+              </a>
+            ))}
+          </span>
         </header>
         {actions ? <p data-profile-actions>{actions}</p> : null}
 
@@ -639,37 +740,6 @@ export function PublicProfileBody({
           <>{profile.bio ? <p>{profile.bio}</p> : null}</>
         )}
 
-        {/* Links live in the identity block, beside who this is — the
-            trustmrr founder-page shape. They are how you check someone out,
-            so they belong next to the name rather than after their numbers. */}
-        {profile.website_url || Object.keys(profile.socials).length > 0 ? (
-          <section data-profile-socials="">
-            {profile.website_url ? (
-              <a href={profile.website_url} rel="nofollow noopener" data-social-link="">
-                Website
-              </a>
-            ) : null}
-            {Object.entries(profile.socials).map(([key, value]) => (
-              <a
-                key={key}
-                href={socialUrl(key, value)}
-                target="_blank"
-                rel="noopener noreferrer nofollow"
-                data-social-link=""
-              >
-                {SOCIAL_LABEL[key] ?? key}
-              </a>
-            ))}
-          </section>
-        ) : null}
-
-        {/* Then what they run. This is the reason someone is on the page. */}
-        <Businesses
-          rows={m.businesses}
-          currency={m.display?.currency ?? "USD"}
-          ownerName={profile.display_name ?? `@${profile.username}`}
-        />
-
         {/* The headline figure stays ABOVE the dashboard: it is the number
             the product is named for, and a visitor who reads nothing else
             should still leave with it. */}
@@ -677,6 +747,12 @@ export function PublicProfileBody({
           <section>
             <h2>Margin</h2>
             <p data-metric="headline">{pct(m.margin_pct)}</p>
+            {/* Which window this figure is, stated: the tiles below it are 30
+                days, and two unlabelled margins on one page is how a reader
+                ends up quoting the wrong one. */}
+            <p data-window-note="">
+              <small>Last {profile.window.months} months</small>
+            </p>
             <p>
               <small>
                 {m.margin_basis === "per_sku"
@@ -694,65 +770,14 @@ export function PublicProfileBody({
           <ProfileDashboard metrics={m} windowMonths={profile.window.months} />
         ) : null}
 
-        {m.display ? (
-          <section>
-            {/* The tiles carry the headline figures; this is the breakdown
-                underneath them — fees and COGS are the numbers a seller is
-                actually asked to prove, and they do not fit in a tile. */}
-            <h2>Breakdown</h2>
-            <dl>
-              <dt>Revenue</dt>
-              <dd>{money(m.display.revenue, m.display.currency)}</dd>
-              <dt>Cost of goods</dt>
-              <dd>{money(m.display.cogs, m.display.currency)}</dd>
-              <dt>Amazon fees</dt>
-              <dd>{money(m.display.fees, m.display.currency)}</dd>
-              <dt>Ad spend</dt>
-              <dd>{money(m.display.ad_spend, m.display.currency)}</dd>
-              <dt>Profit</dt>
-              <dd>{money(m.display.profit, m.display.currency)}</dd>
-            </dl>
+        {/* What they run, under the numbers: the figures above are the claim,
+            and these cards are what the claim is made of. */}
+        <Businesses
+          rows={m.businesses}
+          currency={m.display?.currency ?? "USD"}
+          ownerName={profile.display_name ?? `@${profile.username}`}
+        />
 
-            {m.native && m.native.length > 1 ? (
-              <>
-                <h3>By market</h3>
-                <ul>
-                  {m.native.map((t) => (
-                    <li key={t.currency}>
-                      {t.currency}: {money(t.revenue, t.currency)} revenue, {t.units} units
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : null}
-
-            <p>
-              <small>
-                {profile.window.from} to {profile.window.through}
-                {profile.window.includes_partial_month ? " (this month is still in progress)" : ""}
-              </small>
-            </p>
-          </section>
-        ) : null}
-
-        {m.sku_count !== null || m.brand_count !== null || m.category !== null ? (
-          <section>
-            <h2>Catalogue</h2>
-            <ul>
-              {m.sku_count !== null ? (
-                <li>
-                  <b data-metric="count">{m.sku_count}</b> SKUs
-                </li>
-              ) : null}
-              {m.brand_count !== null ? (
-                <li>
-                  <b data-metric="count">{m.brand_count}</b> {m.brands_label.toLowerCase()}
-                </li>
-              ) : null}
-              {m.category !== null ? <li>{m.category}</li> : null}
-            </ul>
-          </section>
-        ) : null}
 
         {/* Only in edit mode, and deliberately HERE rather than on a settings
             page: these toggles decide what the sections above show, and after
@@ -818,54 +843,16 @@ export function PublicProfileBody({
           </section>
         ) : null}
 
-        {profile.notes.length > 0 ? (
-          <section>
-            <h2>Notes</h2>
-            <ul>
-              {profile.notes.map((note) => (
-                <li key={note}>{note}</li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {/* Window + currency controls live at the bottom, per the plan: the
-            numbers come first, the knobs after. */}
-        <section>
-          <h2>Show</h2>
-          <p>
-            <label htmlFor="window">Window</label>{" "}
-            <select id="window" value={months} onChange={(e) => onMonths?.(Number(e.target.value))}>
-              {[3, 6, 12, 24, 36].map((n) => (
-                <option key={n} value={n}>
-                  Last {n} months
-                </option>
-              ))}
-            </select>
+        {m.display ? (
+          <p data-fx-note="">
+            <small>
+              Converted at rates from {m.display.fx.source}, as of {m.display.fx.as_of}.
+              {m.display.fx.unconvertible.length > 0
+                ? ` No rate for ${m.display.fx.unconvertible.join(", ")} — those markets are shown in their own currency.`
+                : ""}
+            </small>
           </p>
-          {profile.currency_options.length > 0 ? (
-            <p>
-              <label htmlFor="currency">Currency</label>{" "}
-              <select id="currency" value={currency} onChange={(e) => onCurrency?.(e.target.value)}>
-                {profile.currency_options.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </p>
-          ) : null}
-          {m.display ? (
-            <p>
-              <small>
-                Converted at rates from {m.display.fx.source}, as of {m.display.fx.as_of}.
-                {m.display.fx.unconvertible.length > 0
-                  ? ` No rate for ${m.display.fx.unconvertible.join(", ")} — those markets are shown in their own currency.`
-                  : ""}
-              </small>
-            </p>
-          ) : null}
-        </section>
+        ) : null}
       </main>
     </>
   );
@@ -883,8 +870,12 @@ export function PublicProfilePage({
 }: PublicProfilePageProps) {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [months, setMonths] = useState(defaultMonths);
-  const [currency, setCurrency] = useState(defaultCurrency);
+  /* Fixed for now: the on-page selectors are gone, so nothing changes these
+     after mount. They stay as values (not constants) because the props still
+     let a host choose a window, and because a currency picker is the obvious
+     thing to put back. */
+  const [months] = useState(defaultMonths);
+  const [currency] = useState(defaultCurrency);
   const [form, setForm] = useState<ProfileEditForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -979,10 +970,6 @@ export function PublicProfilePage({
       onSave={() => void save()}
       saving={saving}
       status={status}
-      months={months}
-      currency={currency}
-      onMonths={setMonths}
-      onCurrency={setCurrency}
     />
   );
 }

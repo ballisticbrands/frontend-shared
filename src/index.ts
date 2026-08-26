@@ -107,7 +107,11 @@
 //         the name, share button, links in the identity block, and
 //         "Businesses by <name>" as cards with a platform mark, a blurred
 //         brand name and 30-day figures.
-export const SHARED_PACKAGE_VERSION = "0.9.8";
+// v0.9.9: the profile stripped to what a visitor reads — a big round
+//         avatar, "N businesses with verified revenue", share + social
+//         marks in one row, 30-day figures, then the businesses. Drops the
+//         breakdown, catalogue, notes and window/currency blocks.
+export const SHARED_PACKAGE_VERSION = "0.9.9";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

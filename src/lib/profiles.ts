@@ -304,6 +304,13 @@ export interface PublicProfile {
      *  `visibility.sales` — a margin discloses no absolute figure, so a
      *  seller can plot it with revenue private. */
     margin_series: Array<{ month: string; margin_pct: number | null }> | null;
+    /** The profile's trailing 30 days — what the dashboard leads with. */
+    last_30d: {
+      revenue: number | null;
+      profit: number | null;
+      units: number;
+      margin_pct: number | null;
+    } | null;
     /** One row per linked business. `label` is a PLATFORM ("Amazon FBA"),
      *  never the seller's account name, and the badge is per connection —
      *  a synced Amazon account and a typed-in legacy business must not share
