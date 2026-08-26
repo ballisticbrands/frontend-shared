@@ -39,7 +39,7 @@
 //      needed the public endpoint widened, and nothing here may ever
 //      ask for that.
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../api";
 import { StatTile } from "../components/ui/StatTile";
 import { TrendChart } from "../components/ui/TrendChart";
@@ -107,6 +107,11 @@ export interface PublicProfilePageProps {
   onMoved?: (to: string) => void;
   defaultMonths?: number;
   defaultCurrency?: string;
+  /** Fired with each payload this page loads. For host chrome that has to
+   *  say something about a profile it did not fetch — a breadcrumb that
+   *  wants the display name, a currency control that wants to know which
+   *  codes convert. Read-only: the page remains the owner of the data. */
+  onLoaded?: (profile: PublicProfile) => void;
 }
 
 function pct(n: number | null): string {
@@ -896,15 +901,21 @@ export function PublicProfilePage({
   onMoved,
   defaultMonths = 12,
   defaultCurrency = "USD",
+  onLoaded,
 }: PublicProfilePageProps) {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /* Fixed for now: the on-page selectors are gone, so nothing changes these
-     after mount. They stay as values (not constants) because the props still
-     let a host choose a window, and because a currency picker is the obvious
-     thing to put back. */
-  const [months] = useState(defaultMonths);
-  const [currency] = useState(defaultCurrency);
+  /* CONTROLLED by the host, not seeded from it.
+   *
+   * These were `useState(defaultCurrency)`, which reads the prop once and
+   * then ignores it forever. That was invisible while the on-page selectors
+   * were the only thing that could change a currency — and silently wrong
+   * the moment a host put a picker in its own chrome, as VerifiedMargins now
+   * does in the top bar: the select would move, and the page would go on
+   * showing dollars. Held as plain props, a change flows into `load`'s deps
+   * and refetches, which is the only way the figures can actually convert. */
+  const months = defaultMonths;
+  const currency = defaultCurrency;
   const [form, setForm] = useState<ProfileEditForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -913,6 +924,15 @@ export function PublicProfilePage({
    * (every host will) hands us a new object identity on every render, so
    * making `load` depend on it would refetch forever. */
   const ownerProfileId = owner?.profileId ?? null;
+
+  /* Same hazard as `owner` above, one level down: hosts pass `onLoaded` as an
+   * inline arrow, so depending on it directly would rebuild `load` every
+   * render and refetch forever. The ref keeps the callback current without
+   * putting its identity in the dependency list. */
+  const onLoadedRef = useRef(onLoaded);
+  useEffect(() => {
+    onLoadedRef.current = onLoaded;
+  }, [onLoaded]);
 
   const load = useCallback(async () => {
     try {
@@ -924,6 +944,7 @@ export function PublicProfilePage({
         : await fetchPublicProfile(username, { months, currency });
       setProfile(next);
       setError(null);
+      onLoadedRef.current?.(next);
       return next;
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
