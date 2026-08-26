@@ -431,7 +431,12 @@ function ProfileDashboard({
   if (marginSeries) {
     plots.push({ key: "margin", label: "Margin", format: pct });
   }
-  const [plot, setPlot] = useState<PlotKey>(() => (marginSeries ? "margin" : "revenue"));
+  /* Revenue leads. Margin is what the site RANKS on, but revenue is the
+     figure a visitor orients by first — and a chart that opens on a
+     percentage makes a reader hunt for the size before they can read it.
+     Falls back to margin for a profile that publishes margin only, where
+     there is no revenue series to show. */
+  const [plot, setPlot] = useState<PlotKey>(() => (series ? "revenue" : "margin"));
   const active = plots.find((p) => p.key === plot) ?? plots[0];
   if (!active) return null;
 
@@ -764,7 +769,13 @@ export function PublicProfileBody({
             </p>
           </section>
         ) : null}
-        {m.margin_note ? <p>{m.margin_note}</p> : null}
+        {/* The "margin is hidden because your costs don't cover the window"
+            note is for the OWNER, not for visitors: a visitor cannot act on
+            it and it reads as an apology on someone else's page, while the
+            owner needs to know why their headline number is missing. Absence
+            of a figure is not a claim, so nothing dishonest is lost by
+            hiding it from the public view. */}
+        {owner && m.margin_note ? <p data-owner-note="">{m.margin_note}</p> : null}
 
         {m.series || m.margin_series ? (
           <ProfileDashboard metrics={m} windowMonths={profile.window.months} />

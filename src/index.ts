@@ -111,7 +111,9 @@
 //         avatar, "N businesses with verified revenue", share + social
 //         marks in one row, 30-day figures, then the businesses. Drops the
 //         breakdown, catalogue, notes and window/currency blocks.
-export const SHARED_PACKAGE_VERSION = "0.9.9";
+// v0.9.10: the dashboard opens on revenue, and the "margin is hidden"
+//          note is shown to the profile's OWNER only.
+export const SHARED_PACKAGE_VERSION = "0.9.10";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
