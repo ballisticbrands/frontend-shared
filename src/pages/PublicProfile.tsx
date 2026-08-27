@@ -107,6 +107,12 @@ export interface PublicProfilePageProps {
   onMoved?: (to: string) => void;
   defaultMonths?: number;
   defaultCurrency?: string;
+  /** Rendered directly above the name and picture, on the same line as the
+   *  actions column. The host supplies the markup because breadcrumbs are
+   *  made of ROUTES, which is host knowledge; this page only decides where
+   *  they sit — which has to be here, because the header's alignment is
+   *  what puts the first action button on the breadcrumb's line. */
+  breadcrumb?: ReactNode;
   /** Fired with each payload this page loads. For host chrome that has to
    *  say something about a profile it did not fetch — a breadcrumb that
    *  wants the display name, a currency control that wants to know which
@@ -566,6 +572,9 @@ export function editFormFrom(profile: PublicProfile): ProfileEditForm {
 export interface PublicProfileBodyProps {
   profile: PublicProfile;
   actions?: ReactNode;
+  /** See PublicProfilePageProps.breadcrumb — placed by the header, supplied
+   *  by the host. */
+  breadcrumb?: ReactNode;
   owner?: ProfileOwnerProps | null;
   /** Non-null ⇒ edit mode. The container owns the state; this component
    *  owns none, which is what lets a test render it to a string. */
@@ -594,6 +603,7 @@ export interface PublicProfileBodyProps {
 export function PublicProfileBody({
   profile,
   actions,
+  breadcrumb,
   owner,
   form,
   onForm,
@@ -656,6 +666,13 @@ export function PublicProfileBody({
             anonymous, and a wall of grey person-icons reads as an abandoned
             product rather than a deliberate one (BRANDING.md §6). */}
         <header data-profile-head="">
+          {/* Left column: the breadcrumb, then who this is. Splitting the
+              header this way is what lets the actions column top-align with
+              the breadcrumb rather than with the avatar — the first action
+              lands on the crumb line, and the name sits directly under it. */}
+          <span data-profile-main="">
+            {breadcrumb ? <span data-profile-crumbs="">{breadcrumb}</span> : null}
+            <span data-profile-who="">
           <span data-avatar="" aria-hidden="true">
             {profile.avatar_url ? (
               <img src={profile.avatar_url} alt="" />
@@ -683,6 +700,8 @@ export function PublicProfileBody({
                 revenue
               </p>
             ) : null}
+          </span>
+            </span>
           </span>
 
           {/* A STACK, not a row of icons. "Visit 𝕏 profile" tells a reader
@@ -902,6 +921,7 @@ export function PublicProfilePage({
   defaultMonths = 12,
   defaultCurrency = "USD",
   onLoaded,
+  breadcrumb,
 }: PublicProfilePageProps) {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -1006,6 +1026,7 @@ export function PublicProfilePage({
     <PublicProfileBody
       profile={profile}
       actions={actions}
+      breadcrumb={breadcrumb}
       owner={owner}
       form={form}
       onForm={setForm}
