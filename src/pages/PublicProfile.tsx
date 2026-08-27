@@ -440,15 +440,32 @@ function ProfileDashboard({
   metrics: PublicProfile["metrics"];
   windowMonths: number;
 }) {
+  const daily = metrics.daily;
   const series = metrics.series;
   const marginSeries = metrics.margin_series;
   const currency = metrics.display?.currency ?? "USD";
 
+  /* The chart plots DAYS, converted, to agree with the "Last 30 days" heading
+     and the tiles under it. Falls back to the monthly series for a backend
+     that has no `daily` yet — with the caveat that the fallback carries the
+     unconverted per-currency rows this replaced. */
+  const useDaily = Boolean(daily && daily.length > 0);
+  const plotted: Array<{ date: string; revenue: number; units: number; profit: number | null }> =
+    useDaily
+      ? daily!.map((d) => ({ date: d.date, revenue: d.revenue, units: d.units, profit: d.profit }))
+      : (series ?? []).map((p) => ({
+          date: `${p.month}-01`,
+          revenue: p.revenue,
+          units: p.units,
+          profit: p.profit,
+        }));
+  const hasSales = useDaily ? true : Boolean(series);
+
   // What the seller actually published decides what can be plotted.
   const plots: Array<{ key: PlotKey; label: string; format: (v: number | null) => string }> = [];
-  if (series) {
+  if (hasSales) {
     plots.push({ key: "revenue", label: "Revenue", format: (v) => money(v, currency) });
-    if (series.some((p) => p.profit !== null)) {
+    if (plotted.some((p) => p.profit !== null)) {
       plots.push({ key: "profit", label: "Profit", format: (v) => money(v, currency) });
     }
     plots.push({ key: "units", label: "Units", format: (v) => (v === null ? "—" : Math.round(v).toLocaleString()) });
@@ -461,32 +478,43 @@ function ProfileDashboard({
      percentage makes a reader hunt for the size before they can read it.
      Falls back to margin for a profile that publishes margin only, where
      there is no revenue series to show. */
-  const [plot, setPlot] = useState<PlotKey>(() => (series ? "revenue" : "margin"));
+  const [plot, setPlot] = useState<PlotKey>(() => (hasSales ? "revenue" : "margin"));
   const active = plots.find((p) => p.key === plot) ?? plots[0];
   if (!active) return null;
 
+  /* Margin comes off the same rows as everything else when they are daily —
+     a ratio needs no conversion, and deriving it here keeps all four plots on
+     one x-axis. Only the monthly fallback reaches for margin_series. */
+  const marginPoints = useDaily
+    ? plotted.map((p) => ({
+        date: p.date,
+        value: p.profit !== null && p.revenue ? (p.profit / p.revenue) * 100 : null,
+      }))
+    : (marginSeries ?? []).map((p) => ({ date: `${p.month}-01`, value: p.margin_pct }));
+
+  const valueOf = (p: (typeof plotted)[number], key: PlotKey) =>
+    key === "revenue" ? p.revenue : key === "profit" ? p.profit : p.units;
+
   const points =
     active.key === "margin"
-      ? (marginSeries ?? []).map((p) => ({ date: `${p.month}-01`, value: p.margin_pct }))
-      : (series ?? []).map((p) => ({
-          date: `${p.month}-01`,
-          value:
-            active.key === "revenue" ? p.revenue : active.key === "profit" ? p.profit : p.units,
-        }));
+      ? marginPoints
+      : plotted.map((p) => ({ date: p.date, value: valueOf(p, active.key) }));
 
   const spark = (key: PlotKey): Array<number | null> | undefined => {
-    if (key === "margin") return marginSeries?.map((p) => p.margin_pct);
-    if (!series) return undefined;
-    return series.map((p) => (key === "revenue" ? p.revenue : key === "profit" ? p.profit : p.units));
+    if (key === "margin") return marginPoints.map((p) => p.value);
+    if (!hasSales) return undefined;
+    return plotted.map((p) => valueOf(p, key));
   };
 
   return (
     <section data-profile-dashboard="">
-      {/* 🚨 THE HEADING AND THE TILES MUST AGREE. The tiles carry the trailing
-          30 days, so the heading says 30 days. The CHART underneath is
-          monthly and spans the whole window — it gets its own label rather
-          than sitting silently under a "Last 30 days" heading, which would
-          make the page lie about its own axis. */}
+      {/* 🚨 THE HEADING, THE TILES AND THE CHART MUST AGREE. All three are now
+          the trailing 30 days. The chart used to be twelve months of
+          unconverted per-currency rows under a "Last 30 days" heading —
+          two separate ways of lying about its own axis, and it was labelled
+          rather than fixed. Publishing day-level revenue is a deliberate
+          trade (see dailySeries in the backend's public-profile.ts): days
+          expose launch timing, promo cadence and stockouts. */}
       <h2>Last 30 days</h2>
 
       <div data-tiles="">
@@ -515,7 +543,9 @@ function ProfileDashboard({
       </div>
 
       <p data-chart-label="">
-        <small>{active.label} by month, last {windowMonths} months</small>
+        <small>
+          {active.label} {useDaily ? "by day, last 30 days" : `by month, last ${windowMonths} months`}
+        </small>
       </p>
       <div data-chart="">
         <TrendChart
@@ -523,11 +553,12 @@ function ProfileDashboard({
           format={active.format}
           label={active.label}
           formatDate={(iso) =>
-            new Date(iso).toLocaleDateString(undefined, {
-              month: "short",
-              year: "2-digit",
-              timeZone: "UTC",
-            })
+            new Date(iso).toLocaleDateString(
+              undefined,
+              useDaily
+                ? { month: "short", day: "numeric", timeZone: "UTC" }
+                : { month: "short", year: "2-digit", timeZone: "UTC" },
+            )
           }
         />
       </div>

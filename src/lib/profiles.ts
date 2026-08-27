@@ -304,6 +304,22 @@ export interface PublicProfile {
      *  `visibility.sales` — a margin discloses no absolute figure, so a
      *  seller can plot it with revenue private. */
     margin_series: Array<{ month: string; margin_pct: number | null }> | null;
+    /** The last 30 days, one point per day, ALREADY CONVERTED to the display
+     *  currency by the backend. This is what the chart plots.
+     *
+     *  `series` above is per (month, currency) and unconverted — plotting it
+     *  put several points on one x-position at face value, so a multi-market
+     *  seller's line zigzagged between currencies instead of describing
+     *  revenue. It stays for anything that genuinely wants months.
+     *
+     *  Null from a backend that predates the field; the chart falls back. */
+    daily: Array<{
+      date: string;
+      revenue: number;
+      units: number;
+      orders: number;
+      profit: number | null;
+    }> | null;
     /** The profile's trailing 30 days — what the dashboard leads with. */
     last_30d: {
       revenue: number | null;
