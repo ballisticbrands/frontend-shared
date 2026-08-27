@@ -88,6 +88,22 @@ const PROFILE = {
       fx: { as_of: "2026-08-24", source: "ECB", unconvertible: [] },
     },
     series: null,
+    businesses: [
+      {
+        // `page` is the business's own public address. Opaque by
+        // construction: the slug is generated and `name` is that slug
+        // title-cased — neither is anything the seller typed.
+        page: { slug: "amazon-fba-48213", name: "Amazon FBA 48213" },
+        platform: "amazon_selling_partner",
+        label: "Amazon FBA",
+        markets: ["US", "CA"],
+        seller_type: "private_label",
+        last_30d: { revenue: 12500, profit: 3950, margin_pct: 31.6 },
+        revenue: 12500,
+        margin_pct: 31.6,
+        verification: { tier: "verified_margin", label: "Verified margin" },
+      },
+    ],
     margin_pct: 37.2,
     margin_basis: "per_sku",
     margin_note: null,
@@ -141,8 +157,21 @@ test("a non-owner's render is UNCHANGED — byte for byte — by the owner's edi
 
 test("a stranger gets no editing affordance at all", () => {
   const html = render({ owner: null });
-  for (const forbidden of ["<input", "<textarea", "<button", "Edit profile", "data-owner-bar"]) {
+  for (const forbidden of ["<input", "<textarea", "Edit profile", "data-owner-bar"]) {
     assert.ok(!html.includes(forbidden), `a stranger's render contained ${forbidden}`);
+  }
+
+  // 2026-08-28: this used to forbid `<button` outright, and had been FAILING
+  // since v0.9.9 added the Share button — a public control, not an editing
+  // one, so the assertion had simply outlived its wording. Narrowed rather
+  // than deleted: every button a stranger gets must be one we have named
+  // here, so a Save or a Delete appearing on the public render still fails.
+  const buttons = [...html.matchAll(/<button[^>]*>/g)].map((m) => m[0]);
+  for (const button of buttons) {
+    assert.ok(
+      button.includes('data-share=""'),
+      `a stranger's render contained a button that is not Share: ${button}`,
+    );
   }
 });
 
@@ -235,4 +264,74 @@ test("editFormFrom round-trips the payload's own values", () => {
   assert.equal(bare.bio, "");
   assert.equal(bare.websiteUrl, "");
   assert.equal(bare.sellerType, "");
+});
+
+// ─── the business card links to that business's page ─────────────────
+//
+// FEATURE_VM_2026-08-28_business-detail-page shipped /business/:slug with
+// nothing pointing at it; the card is the pointer. What is pinned here is
+// not that a link exists — it is what the link is CALLED, because wrapping
+// the blurred placeholder in an anchor is exactly how you end up with a
+// screen-reader link list full of entries called "Business name hidden".
+
+test("a business card is a link to its own page", () => {
+  const html = render({ owner: null });
+  assert.ok(
+    html.includes('href="/business/amazon-fba-48213"'),
+    "the business card does not link to /business/<slug>",
+  );
+});
+
+test("the link is named for its destination, not 'Business name hidden'", () => {
+  const html = render({ owner: null });
+  // The destination page's own <h1> says "Amazon FBA 48213"; the link must
+  // agree, or a screen-reader user cannot tell where they are being sent.
+  assert.ok(
+    html.includes('aria-label="Amazon FBA 48213"'),
+    "the business link is not named after the page it opens",
+  );
+  assert.ok(
+    !html.includes('aria-label="Business name hidden"'),
+    "a linked card kept the old placeholder label — that is what the link would be CALLED",
+  );
+  // The placeholder is still rendered and still blurred; it is just hidden
+  // from assistive tech so it is not read as if it were the name.
+  assert.ok(html.includes("Stealth Brand"), "the blurred placeholder was dropped");
+  assert.ok(html.includes('data-blurred=""'), "the blur was dropped");
+  assert.ok(html.includes('aria-hidden="true"'), "the placeholder is not hidden from a screen reader");
+});
+
+test("linking a card leaks no business name — the payload still carries none", () => {
+  // The only strings that could name this seller's store are in the fixture
+  // as the profile's own display name and website, both public and both
+  // already on the page. The BUSINESS half must contribute nothing: no
+  // title attribute, and nothing but the derived name in the aria-label.
+  const html = render({ owner: null });
+  assert.ok(!html.includes("title="), "a title attribute appeared on the card — nothing needs one");
+  const labels = [...html.matchAll(/aria-label="([^"]*)"/g)].map((m) => m[1]);
+  for (const label of labels) {
+    assert.ok(
+      !/paramint/i.test(label),
+      `an aria-label carried the seller's own name: "${label}"`,
+    );
+  }
+});
+
+test("a business with no page renders unlinked, and keeps the old label", () => {
+  // `page: null` is the backend saying the page genuinely 404s — Amazon Ads
+  // businesses carry slugs for column uniformity, not because a page exists.
+  // A card linking to a guaranteed 404 is worse than one that does not link.
+  const profile = {
+    ...PROFILE,
+    metrics: {
+      ...PROFILE.metrics,
+      businesses: [{ ...PROFILE.metrics.businesses[0], page: null, platform: "amazon_ads" }],
+    },
+  };
+  const html = render({ owner: null, profile });
+  assert.ok(!html.includes("/business/"), "an unaddressable business was given a link anyway");
+  assert.ok(
+    html.includes('aria-label="Business name hidden"'),
+    "an unlinked card must keep the placeholder's own label — there is no link to name",
+  );
 });

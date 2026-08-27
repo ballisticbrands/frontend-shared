@@ -332,6 +332,15 @@ export interface PublicProfile {
      *  a synced Amazon account and a typed-in legacy business must not share
      *  one verdict. */
     businesses: Array<{
+      /** This business's own public page — `/business/<slug>` — or null when
+       *  it does not have one. Both halves are opaque by construction: the
+       *  slug is generated (`amazon-fba-48213`, a prefix plus five random
+       *  digits) and `name` is that slug title-cased ("Amazon FBA 48213"),
+       *  which is exactly what the destination page's <h1> says. Neither
+       *  carries the seller's store, brand or account name. Null means the
+       *  page genuinely does not exist (an `amazon-ads-*` business 404s by
+       *  design), so the card renders unlinked rather than guessing a URL. */
+      page: { slug: string; name: string } | null;
       platform: string;
       label: string;
       /** Marketplace codes — what tells two Amazon connections apart. */

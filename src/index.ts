@@ -115,7 +115,31 @@
 //          note is shown to the profile's OWNER only.
 // v0.9.11: profile links stack and name their destination —
 //          "Visit 𝕏 profile ↗" rather than a bare glyph.
-export const SHARED_PACKAGE_VERSION = "0.9.11";
+// v0.9.12: PublicProfilePage takes a controlled `currency` and an `onLoaded`
+//          hook, so a host app can hang its own chrome off the payload
+//          without fetching it a second time.
+// v0.9.13: PublicProfilePage takes a `breadcrumb` slot in its header.
+// v0.9.14: the profile chart plots the last 30 DAYS, converted to the display
+//          currency, rather than 12 months of raw currencies —
+//          `metrics.daily`. The heading and the axis finally agree.
+// v0.9.15: the business cards LINK to their own pages. Each row carries
+//          `page: {slug, name} | null` and the card's name becomes an <a> to
+//          /business/<slug>, with `page.name` ("Amazon FBA 48213") as the
+//          link's accessible name — the blurred "Stealth Brand" placeholder
+//          is aria-hidden behind it, so a screen reader's link list names the
+//          destination rather than announcing "Business name hidden". `page`
+//          is null for a business whose page 404s by design (Amazon Ads) and
+//          that card stays unlinked. The host app supplies the CSS that
+//          stretches the link over the whole card.
+//          sellerconnect FEATURE_VM_2026-08-28_business-detail-page.
+//
+// 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
+// above for every bump. The constant exists to tell us at runtime which build
+// a brand is actually serving, so a stale value is worse than no value — it
+// is a confident wrong answer. It drifted three releases behind (0.9.11 while
+// the package said 0.9.14) before test/version.test.mjs was added to fail on
+// exactly that, and on a version with no changelog line.
+export const SHARED_PACKAGE_VERSION = "0.9.15";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

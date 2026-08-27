@@ -331,7 +331,30 @@ const SELLER_TYPE_LABEL: Record<string, string> = {
  *  will eventually get and the hiding reads as a CHOICE rather than as
  *  missing data. Nothing identifying is sent to the browser to blur — the
  *  payload has never carried the brand name, so this is a placeholder string
- *  with a filter on it, not a redaction someone can peel off in devtools. */
+ *  with a filter on it, not a redaction someone can peel off in devtools.
+ *
+ *  ─── The card is a LINK to that business's page (v0.9.15) ──────────────
+ *
+ *  `business.page` is `{ slug, name }` when the business has a public page,
+ *  and null when it does not (an `amazon-ads-*` business, whose page 404s by
+ *  design — the backend refuses the address rather than letting a card point
+ *  at a guaranteed 404). Both halves are opaque: the slug is generated
+ *  (`amazon-fba-48213`) and the name is that slug title-cased.
+ *
+ *  TWO THINGS THE MARKUP HERE IS CAREFUL ABOUT, both accessibility:
+ *
+ *    1. THE LINK'S ACCESSIBLE NAME IS `page.name`, NOT THE PLACEHOLDER. A
+ *       link called "Business name hidden" in a screen reader's link list is
+ *       useless; "Amazon FBA 48213" is what the destination's own <h1> says,
+ *       so the two agree. That name is public by construction — it is the
+ *       slug — and the seller's real store name is still nowhere in this
+ *       DOM, in a title attribute, or in an aria-label.
+ *    2. THE PLACEHOLDER IS `aria-hidden`. Otherwise a screen reader would
+ *       read "Stealth Brand" as if it were the business's name.
+ *
+ *  A plain <a>, not a router Link: this page has no react-router dependency
+ *  and is rendered outside a Router by its tests, and a full navigation is
+ *  what serves the per-business prerender with its own title and OG card. */
 function BusinessCard({
   business,
   currency,
@@ -347,9 +370,17 @@ function BusinessCard({
       <PlatformMark platform={business.platform} />
       <div data-business-body="">
         <div data-business-head="">
-          <span data-business-name="" data-blurred="" aria-label="Business name hidden">
-            Stealth Brand
-          </span>
+          {business.page ? (
+            <a data-business-link="" href={`/business/${business.page.slug}`} aria-label={business.page.name}>
+              <span data-business-name="" data-blurred="" aria-hidden="true">
+                Stealth Brand
+              </span>
+            </a>
+          ) : (
+            <span data-business-name="" data-blurred="" aria-label="Business name hidden">
+              Stealth Brand
+            </span>
+          )}
           {business.verification.tier.startsWith("verified") ? (
             <span data-badge="" data-state="verified">
               {"\u2713"} {business.verification.label}
@@ -402,7 +433,13 @@ function Businesses({
     <section data-profile-businesses="">
       <h2>Businesses by {ownerName}</h2>
       {rows.map((b) => (
-        <BusinessCard key={`${b.platform}-${b.markets.join(",")}`} business={b} currency={currency} />
+        <BusinessCard
+          // The slug is the only genuinely unique key here: a seller with two
+          // Amazon accounts in the same marketplaces collided on the old one.
+          key={b.page?.slug ?? `${b.platform}-${b.markets.join(",")}`}
+          business={b}
+          currency={currency}
+        />
       ))}
     </section>
   );
