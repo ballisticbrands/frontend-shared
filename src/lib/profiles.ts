@@ -326,6 +326,11 @@ export interface PublicProfile {
       profit: number | null;
       units: number;
       margin_pct: number | null;
+      /** Advertising spend. 🚨 NULL MEANS NOT REPORTED, never "spent
+       *  nothing" — a connection with no ads data carries no figure at all,
+       *  and rendering $0 would assert that a seller who advertises does
+       *  not. The PPC tile hides itself instead. */
+      ad_spend: number | null;
     } | null;
     /** One row per linked business. `label` is a PLATFORM ("Amazon FBA"),
      *  never the seller's account name, and the badge is per connection —

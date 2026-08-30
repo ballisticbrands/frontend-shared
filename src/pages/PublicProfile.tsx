@@ -585,6 +585,18 @@ function ProfileDashboard({
             { key: "profit", label: "Profit", value: money(metrics.last_30d?.profit ?? null, currency) },
             { key: "revenue", label: "Revenue", value: money(metrics.last_30d?.revenue ?? null, currency) },
             { key: "margin", label: "Margin", value: pct(metrics.last_30d?.margin_pct ?? null) },
+            /* PPC — advertising spend, in money, beside the margin it eats
+               into. 🚨 THE ONE TILE THAT DISAPPEARS rather than showing a
+               dash: `ad_spend` is null for "not reported", so a "—" would
+               imply we looked and found nothing while "$0" would assert that
+               a seller who advertises does not. Dropped from the row instead,
+               by the filter below. */
+            {
+              key: "ppc",
+              label: "PPC",
+              value: money(metrics.last_30d?.ad_spend ?? null, currency),
+              hideWhenEmpty: metrics.last_30d?.ad_spend == null,
+            },
             {
               key: "skus",
               label: "SKUs",
@@ -594,8 +606,10 @@ function ProfileDashboard({
                   : metrics.sku_count.toLocaleString(),
             },
           ] as const
-        ).map((t) => {
-          const plottable = plots.find((p) => p.key === t.key);
+        )
+          .filter((t) => !("hideWhenEmpty" in t && t.hideWhenEmpty))
+          .map((t) => {
+            const plottable = plots.find((p) => p.key === t.key);
           return (
             <StatTile
               key={t.key}

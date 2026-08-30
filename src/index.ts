@@ -176,13 +176,21 @@
 //          profile URL anyway, it only needed something to offer when there
 //          is no `window` (the static prerender).
 //
+// v0.9.23: shorter badge tooltips.
+// v0.9.24: a PPC tile on the profile dashboard — 30-day advertising spend in
+//          money, between Margin and SKUs. 🚨 It is the one tile that
+//          DISAPPEARS when its figure is absent rather than showing a dash:
+//          `last_30d.ad_spend` is null for "not reported", so "—" would imply
+//          we looked and found nothing while "$0" would assert that a seller
+//          who advertises does not.
+
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
 // a brand is actually serving, so a stale value is worse than no value — it
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.22";
+export const SHARED_PACKAGE_VERSION = "0.9.24";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
