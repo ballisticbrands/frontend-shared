@@ -257,10 +257,16 @@ function ShareIcon() {
 /** Copy-the-link, with the clipboard API's failure handled rather than
  *  assumed: it rejects on http origins and in some embedded webviews, and a
  *  Share button that silently does nothing is worse than one that offers the
- *  URL to copy by hand. */
-function ShareButton({ username }: { username: string }) {
+ *  URL to copy by hand.
+ *
+ *  Exported since 0.9.21 so the per-BUSINESS page can share itself with the
+ *  same control rather than growing a second copy that drifts. `fallbackPath`
+ *  replaces the old `username` prop: this never resolves to a profile URL any
+ *  more, it is simply what to offer when there is no `window` to read a real
+ *  one from (the static prerender). */
+export function ShareButton({ fallbackPath }: { fallbackPath: string }) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
-  const url = typeof window !== "undefined" ? window.location.href : `/${username}`;
+  const url = typeof window !== "undefined" ? window.location.href : fallbackPath;
   return (
     <button
       type="button"
@@ -829,7 +835,7 @@ export function PublicProfileBody({
               to trust the person. Each outbound link carries the
               leaves-the-site mark for the same reason. */}
           <span data-profile-actions-row="">
-            <ShareButton username={profile.username} />
+            <ShareButton fallbackPath={`/${profile.username}`} />
             {profile.website_url ? (
               <a href={profile.website_url} rel="nofollow noopener" data-social-link="">
                 <span data-social-label="">Visit {SOCIAL_ICON.website} website</span>

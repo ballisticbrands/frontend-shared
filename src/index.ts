@@ -169,6 +169,12 @@
 //          origin (AMAZON_MARK_SRC, default /amazon-mark.png) rather than a
 //          hand-drawn SVG smile that read as a smear at card size. Still no
 //          third-party request — the file is ours.
+// v0.9.21: exports ShareButton and AMAZON_MARK_SRC, so the per-business page
+//          can share itself and show the same mark with the same code rather
+//          than growing a second copy of each. ShareButton takes
+//          `fallbackPath` instead of `username`: it never resolved to a
+//          profile URL anyway, it only needed something to offer when there
+//          is no `window` (the static prerender).
 //
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
@@ -176,7 +182,7 @@
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.20";
+export const SHARED_PACKAGE_VERSION = "0.9.21";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -432,5 +438,5 @@ export {
   VERIFICATION_TIP,
 } from "./components/VerificationBadge";
 export type { VerificationBadgeState } from "./components/VerificationBadge";
-export { PublicProfilePage } from "./pages/PublicProfile";
+export { PublicProfilePage, ShareButton, AMAZON_MARK_SRC } from "./pages/PublicProfile";
 export type { ProfileOwnerProps, PublicProfilePageProps } from "./pages/PublicProfile";
