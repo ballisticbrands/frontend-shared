@@ -169,7 +169,7 @@
 //          origin (AMAZON_MARK_SRC, default /amazon-mark.png) rather than a
 //          hand-drawn SVG smile that read as a smear at card size. Still no
 //          third-party request — the file is ours.
-// v0.9.21: exports ShareButton and AMAZON_MARK_SRC, so the per-business page
+// v0.9.22: exports ShareButton and AMAZON_MARK_SRC, so the per-business page
 //          can share itself and show the same mark with the same code rather
 //          than growing a second copy of each. ShareButton takes
 //          `fallbackPath` instead of `username`: it never resolved to a
@@ -182,7 +182,7 @@
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.21";
+export const SHARED_PACKAGE_VERSION = "0.9.22";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
