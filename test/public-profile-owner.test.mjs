@@ -334,3 +334,44 @@ test("a business with no page renders unlinked, and keeps the old label", () => 
   // the platform label — never to a blank, and never to a link.
   assert.ok(html.includes("Amazon FBA"), "an unlinked card must still name what it is");
 });
+
+test("a manually-entered Amazon business still gets the Amazon mark", () => {
+  // `platform` is connection.provider — HOW THE DATA ARRIVED. A business typed
+  // in by hand carries "manual" while its label says "Amazon FBA", and
+  // matching on provider alone drew it as an anonymous square here while its
+  // own business page showed the Amazon mark. Two surfaces disagreeing about
+  // one business is worse than either answer on its own.
+  const profile = {
+    ...PROFILE,
+    metrics: {
+      ...PROFILE.metrics,
+      businesses: [
+        { ...PROFILE.metrics.businesses[0], platform: "manual", label: "Amazon FBA" },
+      ],
+    },
+  };
+  const html = render({ owner: null, profile });
+  assert.ok(
+    html.includes('data-platform="amazon"'),
+    "a manual Amazon business fell back to the anonymous mark",
+  );
+});
+
+test("a genuinely non-Amazon business keeps the neutral mark", () => {
+  // The label decides only when the provider cannot, and only for Amazon —
+  // it must not turn every manual row into an Amazon one.
+  const profile = {
+    ...PROFILE,
+    metrics: {
+      ...PROFILE.metrics,
+      businesses: [
+        { ...PROFILE.metrics.businesses[0], platform: "manual", label: "Shopify" },
+      ],
+    },
+  };
+  const html = render({ owner: null, profile });
+  assert.ok(
+    !html.includes('data-platform="amazon"'),
+    "a Shopify business was drawn as Amazon",
+  );
+});

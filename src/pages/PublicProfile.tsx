@@ -306,8 +306,26 @@ export function ShareButton({ fallbackPath }: { fallbackPath: string }) {
  */
 export const AMAZON_MARK_SRC = "/amazon-mark.png";
 
-function PlatformMark({ platform }: { platform: string }) {
-  if (platform === "amazon_selling_partner" || platform === "amazon_ads") {
+/**
+ * The mark for a business card.
+ *
+ * 🚨 `platform` is `connection.provider` — HOW THE DATA ARRIVED, not what the
+ * business sells on. A manually-entered Amazon FBA business carries
+ * `provider: "manual"` with `label: "Amazon FBA"`, and matching on provider
+ * alone drew it as an anonymous ■ while its own business page showed the
+ * Amazon mark. Two surfaces disagreeing about the same business is worse than
+ * either answer.
+ *
+ * So the LABEL decides when the provider cannot: the label is the platform
+ * ("Amazon FBA"), which is the question being asked. Provider still wins when
+ * it is conclusive, so a real SP-API connection is unaffected.
+ */
+function PlatformMark({ platform, label }: { platform: string; label?: string }) {
+  const isAmazon =
+    platform === "amazon_selling_partner" ||
+    platform === "amazon_ads" ||
+    /^amazon\b/i.test(label ?? "");
+  if (isAmazon) {
     return (
       <span data-business-mark="" data-platform="amazon">
         <img src={AMAZON_MARK_SRC} alt="" aria-hidden="true" width={28} height={28} />
@@ -367,7 +385,7 @@ function BusinessCard({
     .join(" · ");
   return (
     <article data-business="">
-      <PlatformMark platform={business.platform} />
+      <PlatformMark platform={business.platform} label={business.label} />
       <div data-business-body="">
         <div data-business-head="">
           {/* THE NAME, PLAIN. It used to render a blurred "Stealth Brand"
