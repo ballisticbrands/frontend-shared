@@ -548,20 +548,20 @@ function ProfileDashboard({
      which figure the page is about. `Units` was dropped in the same pass —
      four tiles is the whole set, and unit count was the least load-bearing
      of the five. */
+  const hasProfit = plotted.some((p) => p.profit !== null);
+  if (hasSales && hasProfit) {
+    plots.push({ key: "profit", label: "Profit", format: (v) => money(v, currency) });
+  }
   if (hasSales) {
-    if (plotted.some((p) => p.profit !== null)) {
-      plots.push({ key: "profit", label: "Profit", format: (v) => money(v, currency) });
-    }
     plots.push({ key: "revenue", label: "Revenue", format: (v) => money(v, currency) });
   }
   if (marginSeries) {
     plots.push({ key: "margin", label: "Margin", format: pct });
   }
-  /* Opens on the leading tile. Falls back down the same order the tiles are
-     in, so the highlighted tile is never one the reader has to hunt for. */
-  const [plot, setPlot] = useState<PlotKey>(() =>
-    hasSales ? "profit" : marginSeries ? "margin" : "revenue",
-  );
+  /* Opens on the leading tile that is ACTUALLY plottable. Reaching for
+     "profit" unconditionally left `plot` pointing at a tile that was not
+     rendered on a profile with no costs, so nothing looked selected. */
+  const [plot, setPlot] = useState<PlotKey | null>(null);
   const active = plots.find((p) => p.key === plot) ?? plots[0];
   if (!active) return null;
 
@@ -608,36 +608,50 @@ function ProfileDashboard({
           expose launch timing, promo cadence and stockouts. */}
       <h2>Last 30 days</h2>
 
+      {/* FOUR TILES, ALWAYS THE SAME FOUR — the set the business page shows,
+          so a reader moving between the two pages does not have to re-learn
+          what a tile means.
+          🚨 A tile is rendered whether or not its figure exists; a missing one
+          shows "—". Dropping the Profit tile on a profile with no costs (which
+          is what happened before) made the row silently change shape from
+          profile to profile, and left Margin rendering a dash beside a Profit
+          that had vanished — two different answers to the same question.
+          A tile is CLICKABLE only when it has a series behind it. SKUs never
+          does (the payload carries one count, not a series), and neither does
+          a figure the seller did not publish. A control that changed no chart
+          would be a control lying about being one. */}
       <div data-tiles="">
-        {plots.map((p) => (
-          <StatTile
-            key={p.key}
-            label={p.label}
-            value={
-              p.key === "margin"
-                ? pct(metrics.last_30d?.margin_pct ?? null)
-                : p.key === "revenue"
-                  ? money(metrics.last_30d?.revenue ?? null, currency)
-                  : money(metrics.last_30d?.profit ?? null, currency)
-            }
-            /* No delta chip: a period-over-period change needs a previous
-               period, and publishing one the seller did not choose to publish
-               is the same mistake as a comparison line. */
-            delta={null}
-            spark={spark(p.key)}
-            selected={p.key === plot}
-            onClick={() => setPlot(p.key)}
-          />
-        ))}
-        {/* 🚨 NOT a selector, and deliberately not made to look like one: the
-            payload carries ONE sku_count, not a series, so there is nothing
-            for a click to plot. Giving it an onClick that changed no chart
-            would be a control that lies about being one. It sits in the row
-            because the four tiles are the set a reader compares — the same
-            four the business page shows. */}
-        {metrics.sku_count !== null && metrics.sku_count !== undefined ? (
-          <StatTile label="SKUs" value={metrics.sku_count.toLocaleString()} delta={null} />
-        ) : null}
+        {(
+          [
+            { key: "profit", label: "Profit", value: money(metrics.last_30d?.profit ?? null, currency) },
+            { key: "revenue", label: "Revenue", value: money(metrics.last_30d?.revenue ?? null, currency) },
+            { key: "margin", label: "Margin", value: pct(metrics.last_30d?.margin_pct ?? null) },
+            {
+              key: "skus",
+              label: "SKUs",
+              value:
+                metrics.sku_count === null || metrics.sku_count === undefined
+                  ? "—"
+                  : metrics.sku_count.toLocaleString(),
+            },
+          ] as const
+        ).map((t) => {
+          const plottable = plots.find((p) => p.key === t.key);
+          return (
+            <StatTile
+              key={t.key}
+              label={t.label}
+              value={t.value}
+              /* No delta chip: a period-over-period change needs a previous
+                 period, and publishing one the seller did not choose to
+                 publish is the same mistake as a comparison line. */
+              delta={null}
+              spark={plottable ? spark(plottable.key) : undefined}
+              selected={plottable ? plottable.key === active.key : false}
+              onClick={plottable ? () => setPlot(plottable.key) : undefined}
+            />
+          );
+        })}
       </div>
 
       <p data-chart-label="">

@@ -147,6 +147,12 @@
 //          "N businesses with verified revenue" counted every verified
 //          business and then named one of the two things they could be
 //          verified FOR, so a mixed portfolio was described wrongly.
+// v0.9.18: the four tiles are ALWAYS the same four. 0.9.17 dropped the Profit
+//          tile entirely on a profile with no costs while Margin still
+//          rendered a dash beside it — two different answers to the same
+//          question, and a tile row that changed shape from profile to
+//          profile. A tile now renders whether or not its figure exists, and
+//          is clickable only when it has a series behind it.
 //
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
@@ -154,7 +160,7 @@
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.17";
+export const SHARED_PACKAGE_VERSION = "0.9.18";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
