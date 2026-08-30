@@ -421,5 +421,16 @@ export type {
 
 export { ProfileSettingsPage } from "./pages/ProfileSettings";
 export type { ProfileSettingsPageProps } from "./pages/ProfileSettings";
+/* The verification badge and the ONE definition of the ladder it draws —
+ * state, glyph and the hover explainer. Host pages import these instead of
+ * re-deriving "which tier is green" locally; it had been copy-pasted four
+ * times before this existed. */
+export {
+  VerificationBadge,
+  verificationBadgeState,
+  VERIFICATION_GLYPH,
+  VERIFICATION_TIP,
+} from "./components/VerificationBadge";
+export type { VerificationBadgeState } from "./components/VerificationBadge";
 export { PublicProfilePage } from "./pages/PublicProfile";
 export type { ProfileOwnerProps, PublicProfilePageProps } from "./pages/PublicProfile";
