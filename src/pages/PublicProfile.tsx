@@ -335,9 +335,12 @@ const SELLER_TYPE_LABEL: Record<string, string> = {
  *
  * The ladder is legible at a glance now:
  *
- *   verified_margin   check   green   revenue AND costs checked
- *   verified_revenue  half    amber   revenue checked, margin modelled
- *   everything else   ring    grey    nothing checked
+ *   verified_margin   check  data-state="verified"   revenue AND costs checked
+ *   verified_revenue  half   data-state="partial"    revenue checked, margin modelled
+ *   everything else   ring   data-state="estimated"  nothing checked
+ *
+ * The glyph ladder is fixed here; the COLOUR of each rung is the host's to
+ * choose and is deliberately not named in this file.
  *
  * 🚨 SHAPE AND WORD CARRY IT, NOT COLOUR (VerifiedMargins BRANDING.md §5).
  * The glyph steps filled -> half -> empty and the label states the tier in
