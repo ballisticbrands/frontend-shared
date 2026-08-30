@@ -953,30 +953,14 @@ export function PublicProfileBody({
           <>{profile.bio ? <p>{profile.bio}</p> : null}</>
         )}
 
-        {/* The headline figure stays ABOVE the dashboard: it is the number
-            the product is named for, and a visitor who reads nothing else
-            should still leave with it. */}
-        {m.margin_pct !== null ? (
-          <section>
-            <h2>Margin</h2>
-            <p data-metric="headline">{pct(m.margin_pct)}</p>
-            {/* Which window this figure is, stated: the tiles below it are 30
-                days, and two unlabelled margins on one page is how a reader
-                ends up quoting the wrong one. */}
-            <p data-window-note="">
-              <small>Last {profile.window.months} months</small>
-            </p>
-            <p>
-              <small>
-                {m.margin_basis === "per_sku"
-                  ? "Computed from per-SKU costs."
-                  : m.margin_basis === "blended_pct"
-                    ? "Modelled from a blended cost percentage the seller supplied."
-                    : "Mixed cost basis."}
-              </small>
-            </p>
-          </section>
-        ) : null}
+        {/* 🚨 THERE IS NO STANDALONE MARGIN SECTION, deliberately (removed
+            2026-08-30). It rendered a 12-MONTH margin as the page's headline
+            while the tiles immediately below it showed a 30-day one — two
+            different margins, one of them large and unlabelled, on a page
+            whose product is that its numbers are not misread. The tile is the
+            margin now, on the same window as everything beside it, and the
+            cost basis it was explaining is what the verification badge in the
+            header already says. */}
         {/* The "margin is hidden because your costs don't cover the window"
             note is for the OWNER, not for visitors: a visitor cannot act on
             it and it reads as an apology on someone else's page, while the

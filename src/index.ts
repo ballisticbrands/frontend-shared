@@ -153,6 +153,12 @@
 //          question, and a tile row that changed shape from profile to
 //          profile. A tile now renders whether or not its figure exists, and
 //          is clickable only when it has a series behind it.
+// v0.9.19: the standalone "Margin" section is gone. It rendered a 12-MONTH
+//          margin as the page's headline while the tiles directly below it
+//          showed a 30-day one — two different margins on one page, the
+//          larger of them unlabelled. The tile is the margin now, on the same
+//          window as everything beside it, and the cost basis that section
+//          explained is what the verification badge already says.
 //
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
@@ -160,7 +166,7 @@
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.18";
+export const SHARED_PACKAGE_VERSION = "0.9.19";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
