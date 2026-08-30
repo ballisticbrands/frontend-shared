@@ -49,18 +49,22 @@ export const VERIFICATION_GLYPH: Record<VerificationBadgeState, string> = {
  * DELIBERATELY NOT the API's `verification.description`. That field is two
  * sentences written for a profile header with room to breathe, and it is not
  * carried on the per-business payload at all — only `{ tier, label }` is. A
- * tooltip that has to be read in the second before the pointer moves gets its
- * own copy, kept to one line.
+ * tooltip has to land in the second before the pointer moves, so it gets its
+ * own copy.
+ *
+ * 🚨 THE THREE LINES ARE PARALLEL ON PURPOSE — same two nouns, same order,
+ * only the verbs change. A reader meets these one at a time, hovering one
+ * badge and then another, and holds them in memory rather than side by side.
+ * Matched phrasing is what lets them diff two rungs from memory; three
+ * differently-shaped sentences make that work.
  *
  * ⚠️ Says what was CHECKED, never how good the business is. A thin margin we
  * verified is still `verified`; the badge has never been a rating.
  */
 export const VERIFICATION_TIP: Record<VerificationBadgeState, string> = {
-  verified:
-    "Revenue and cost of goods were both checked. This margin is verified, not modelled.",
-  partial:
-    "Revenue comes straight from Amazon. The margin is modelled from a cost percentage the seller supplied, so it is not verified.",
-  estimated: "Nothing on this card was checked against Amazon.",
+  verified: "Both revenue and margins are verified.",
+  partial: "Revenue is verified. Margin % is user-supplied.",
+  estimated: "Neither revenue nor margin % is verified.",
 };
 
 /**
