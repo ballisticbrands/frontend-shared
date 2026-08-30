@@ -40,6 +40,7 @@
 //      ask for that.
 
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { VerificationBadge } from "../components/VerificationBadge";
 import { ApiError } from "../api";
 import { StatTile } from "../components/ui/StatTile";
 import { TrendChart } from "../components/ui/TrendChart";
@@ -279,34 +280,31 @@ function ShareButton({ username }: { username: string }) {
   );
 }
 
-/** Platform mark. An inline SVG rather than a hosted image: the profile page
- *  is prerendered and shared as a link, and a third-party logo URL is a
- *  request we do not control and a mixed-content risk we do not need. */
+/**
+ * Platform mark — the real Amazon logo, served from our OWN origin.
+ *
+ * It was a hand-drawn SVG smile, on the reasoning that a hosted logo is a
+ * third-party request on a page we prerender and share. The reasoning was
+ * right and the conclusion was wrong: the fix is to host the file ourselves,
+ * not to redraw the mark. The drawn version read as a smear at card size and
+ * looked like a defect rather than a brand.
+ *
+ * `AMAZON_MARK_SRC` is a SAME-ORIGIN path, so there is still no third-party
+ * request, nothing to block, and no mixed content. The host app ships the
+ * file (verifiedmargins-frontend/public/amazon-mark.png); a brand that does
+ * not want it can pass its own path.
+ *
+ * `aria-hidden` with no alt text: the business's name is right beside this
+ * and already says "Amazon FBA". A screen reader announcing "Amazon" here
+ * would read the platform twice.
+ */
+export const AMAZON_MARK_SRC = "/amazon-mark.png";
+
 function PlatformMark({ platform }: { platform: string }) {
   if (platform === "amazon_selling_partner" || platform === "amazon_ads") {
     return (
-      <span data-business-mark="" data-platform="amazon" aria-label="Amazon">
-        {/* The smile, drawn rather than fetched: a hosted logo is a
-            third-party request on a page we prerender and people share, and
-            monochrome keeps a competitor's brand colour off a palette whose
-            whole argument is that green means one thing. */}
-        <svg viewBox="0 0 64 40" width="30" height="20" role="img" aria-hidden="true">
-          <path
-            d="M3 26c8.6 6.2 19.4 9.3 29 9.3 6.6 0 13.9-1.4 20.7-4.2"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="4.6"
-            strokeLinecap="round"
-          />
-          <path d="M49.5 27.4l9.5-3.1-2.2 9.7z" fill="currentColor" />
-          <path
-            d="M14 15.5c0-2.6 1.9-4.3 4.6-4.3 1.6 0 3 .6 3.9 1.7"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3.4"
-            strokeLinecap="round"
-          />
-        </svg>
+      <span data-business-mark="" data-platform="amazon">
+        <img src={AMAZON_MARK_SRC} alt="" aria-hidden="true" width={28} height={28} />
       </span>
     );
   }
@@ -323,81 +321,30 @@ const SELLER_TYPE_LABEL: Record<string, string> = {
   dropshipper: "Dropshipping",
 };
 
-/**
- * THREE states, not two — and the third is the whole reason it exists.
- *
- * `verified_revenue` and `verified_margin` both begin with "verified", so the
- * old `tier.startsWith("verified")` test rendered them IDENTICALLY: same
- * green, same check, different word. That let the strongest thing we can say
- * about a profile look exactly like a weaker thing we can say about it, which
- * is the one confusion this product cannot afford — a seller whose costs we
- * never checked wore the same badge as a seller whose costs we did.
- *
- * The ladder is legible at a glance now:
- *
- *   verified_margin   check  data-state="verified"   revenue AND costs checked
- *   verified_revenue  half   data-state="partial"    revenue checked, margin modelled
- *   everything else   ring   data-state="estimated"  nothing checked
- *
- * The glyph ladder is fixed here; the COLOUR of each rung is the host's to
- * choose and is deliberately not named in this file.
- *
- * 🚨 SHAPE AND WORD CARRY IT, NOT COLOUR (VerifiedMargins BRANDING.md §5).
- * The glyph steps filled -> half -> empty and the label states the tier in
- * words, so the ladder survives a greyscale screenshot and a colour-blind
- * reader. Colour is the third channel and never the only one.
- *
- * Host apps style `[data-badge][data-state]` from their own tokens, so a
- * brand that defines no amber degrades to an unfilled pill rather than to a
- * wrong one.
- */
-function VerificationBadge({
-  verification,
-}: {
-  verification: { tier: string; label: string };
-}) {
-  const state =
-    verification.tier === "verified_margin"
-      ? "verified"
-      : verification.tier === "verified_revenue"
-        ? "partial"
-        : "estimated";
-  const glyph = state === "verified" ? "\u2713" : state === "partial" ? "\u25D1" : "\u25CB";
-  return (
-    <span data-badge="" data-state={state}>
-      {glyph} {verification.label}
-    </span>
-  );
-}
-
 /** One business card.
  *
- *  🚨 THE NAME IS DELIBERATELY UNREADABLE. Sellers will be able to reveal
- *  their brand in a later update; until then the card shows a blurred
- *  placeholder rather than omitting the line, so the layout is the one they
- *  will eventually get and the hiding reads as a CHOICE rather than as
- *  missing data. Nothing identifying is sent to the browser to blur — the
- *  payload has never carried the brand name, so this is a placeholder string
- *  with a filter on it, not a redaction someone can peel off in devtools.
+ *  🚨 THE NAME IS `page.name` — "Amazon FBA 08873" — AND NOTHING ELSE.
+ *
+ *  It rendered a blurred "Stealth Brand" placeholder until 2026-08-30, from
+ *  when a business had no page and no name of its own: the blur stood in for
+ *  a brand the seller had not agreed to publish, and the layout was the one
+ *  they would eventually get. That reasoning is spent. `page.name` is derived
+ *  from the opaque slug, is public by construction, and is exactly what the
+ *  destination page puts in its own <h1> — so blurring it taught a reader we
+ *  were withholding something when we were not.
+ *
+ *  What has NOT changed is the thing the blur was protecting: the seller's
+ *  real storefront name. `Connection.name` and `Connection.uniqueDisplayId`
+ *  ("Paramint Designs (US | CA | MX)") have never been on this payload and
+ *  must never be. The privacy test in the backend
+ *  (public-profile-privacy.http.test.ts) is what keeps that true.
  *
  *  ─── The card is a LINK to that business's page (v0.9.15) ──────────────
  *
  *  `business.page` is `{ slug, name }` when the business has a public page,
- *  and null when it does not (an `amazon-ads-*` business, whose page 404s by
- *  design — the backend refuses the address rather than letting a card point
- *  at a guaranteed 404). Both halves are opaque: the slug is generated
- *  (`amazon-fba-48213`) and the name is that slug title-cased.
- *
- *  TWO THINGS THE MARKUP HERE IS CAREFUL ABOUT, both accessibility:
- *
- *    1. THE LINK'S ACCESSIBLE NAME IS `page.name`, NOT THE PLACEHOLDER. A
- *       link called "Business name hidden" in a screen reader's link list is
- *       useless; "Amazon FBA 48213" is what the destination's own <h1> says,
- *       so the two agree. That name is public by construction — it is the
- *       slug — and the seller's real store name is still nowhere in this
- *       DOM, in a title attribute, or in an aria-label.
- *    2. THE PLACEHOLDER IS `aria-hidden`. Otherwise a screen reader would
- *       read "Stealth Brand" as if it were the business's name.
+ *  and null when it does not (an ads business, which has no address at all).
+ *  A card with no page falls back to the platform label and is not a link —
+ *  never a link to a guaranteed 404.
  *
  *  A plain <a>, not a router Link: this page has no react-router dependency
  *  and is rendered outside a Router by its tests, and a full navigation is
@@ -417,16 +364,22 @@ function BusinessCard({
       <PlatformMark platform={business.platform} />
       <div data-business-body="">
         <div data-business-head="">
+          {/* THE NAME, PLAIN. It used to render a blurred "Stealth Brand"
+              placeholder, from when a business had no page and no name of its
+              own — the blur stood in for a brand the seller had not agreed to
+              publish. That reasoning is spent: `page.name` is "Amazon FBA
+              08873", derived from the opaque slug, and it is what the
+              business's own page puts in its <h1>. Blurring a name that is
+              public by construction taught a reader we were hiding something
+              when we were not.
+              🚨 Still never `Connection.name` or `uniqueDisplayId` — the real
+              storefront name has never been on this payload and must not be. */}
           {business.page ? (
-            <a data-business-link="" href={`/business/${business.page.slug}`} aria-label={business.page.name}>
-              <span data-business-name="" data-blurred="" aria-hidden="true">
-                Stealth Brand
-              </span>
+            <a data-business-link="" href={`/business/${business.page.slug}`}>
+              <span data-business-name="">{business.page.name}</span>
             </a>
           ) : (
-            <span data-business-name="" data-blurred="" aria-label="Business name hidden">
-              Stealth Brand
-            </span>
+            <span data-business-name="">{business.label}</span>
           )}
           <VerificationBadge verification={business.verification} />
         </div>

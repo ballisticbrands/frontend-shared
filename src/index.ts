@@ -159,6 +159,16 @@
 //          larger of them unlabelled. The tile is the margin now, on the same
 //          window as everything beside it, and the cost basis that section
 //          explained is what the verification badge already says.
+// v0.9.20: business cards show their real name ("Amazon FBA 08873") instead
+//          of a blurred "Stealth Brand" placeholder. The name is derived from
+//          the opaque slug and is what the destination page's own <h1> says,
+//          so blurring it taught a reader we were withholding something we
+//          were not. The seller's REAL storefront name is still nowhere on
+//          the payload, which is what the blur was actually protecting.
+//          PlatformMark serves the real Amazon logo from the host app's own
+//          origin (AMAZON_MARK_SRC, default /amazon-mark.png) rather than a
+//          hand-drawn SVG smile that read as a smear at card size. Still no
+//          third-party request — the file is ours.
 //
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
@@ -166,7 +176,7 @@
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.19";
+export const SHARED_PACKAGE_VERSION = "0.9.20";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

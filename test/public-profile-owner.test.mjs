@@ -270,9 +270,13 @@ test("editFormFrom round-trips the payload's own values", () => {
 //
 // FEATURE_VM_2026-08-28_business-detail-page shipped /business/:slug with
 // nothing pointing at it; the card is the pointer. What is pinned here is
-// not that a link exists — it is what the link is CALLED, because wrapping
-// the blurred placeholder in an anchor is exactly how you end up with a
-// screen-reader link list full of entries called "Business name hidden".
+// not that a link exists — it is what the link is CALLED, and that linking a
+// card still leaks no store name.
+//
+// The card showed a blurred "Stealth Brand" placeholder until 2026-08-30; it
+// now shows `page.name` ("Amazon FBA 48213") plainly. The blur was protecting
+// the seller's REAL storefront name, and that is still protected — by the
+// payload never carrying it, which is what the leak test below pins.
 
 test("a business card is a link to its own page", () => {
   const html = render({ owner: null });
@@ -282,23 +286,19 @@ test("a business card is a link to its own page", () => {
   );
 });
 
-test("the link is named for its destination, not 'Business name hidden'", () => {
+test("the card shows the business's real name, unblurred", () => {
   const html = render({ owner: null });
-  // The destination page's own <h1> says "Amazon FBA 48213"; the link must
-  // agree, or a screen-reader user cannot tell where they are being sent.
-  assert.ok(
-    html.includes('aria-label="Amazon FBA 48213"'),
-    "the business link is not named after the page it opens",
-  );
+  // The destination page's own <h1> says "Amazon FBA 48213". The card says
+  // the same, so a reader and a screen-reader user are told the same thing
+  // about where the link goes — no aria-label needed, because the link text
+  // IS the name now.
+  assert.ok(html.includes("Amazon FBA 48213"), "the card does not show the business name");
+  assert.ok(!html.includes("Stealth Brand"), "the blurred placeholder is still being rendered");
+  assert.ok(!html.includes('data-blurred=""'), "the name is still blurred");
   assert.ok(
     !html.includes('aria-label="Business name hidden"'),
-    "a linked card kept the old placeholder label — that is what the link would be CALLED",
+    "the placeholder's label outlived the placeholder",
   );
-  // The placeholder is still rendered and still blurred; it is just hidden
-  // from assistive tech so it is not read as if it were the name.
-  assert.ok(html.includes("Stealth Brand"), "the blurred placeholder was dropped");
-  assert.ok(html.includes('data-blurred=""'), "the blur was dropped");
-  assert.ok(html.includes('aria-hidden="true"'), "the placeholder is not hidden from a screen reader");
 });
 
 test("linking a card leaks no business name — the payload still carries none", () => {
@@ -330,8 +330,7 @@ test("a business with no page renders unlinked, and keeps the old label", () => 
   };
   const html = render({ owner: null, profile });
   assert.ok(!html.includes("/business/"), "an unaddressable business was given a link anyway");
-  assert.ok(
-    html.includes('aria-label="Business name hidden"'),
-    "an unlinked card must keep the placeholder's own label — there is no link to name",
-  );
+  // With no page there is no derived name to show, so the card falls back to
+  // the platform label — never to a blank, and never to a link.
+  assert.ok(html.includes("Amazon FBA"), "an unlinked card must still name what it is");
 });
