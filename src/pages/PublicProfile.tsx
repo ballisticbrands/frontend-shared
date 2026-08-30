@@ -323,6 +323,50 @@ const SELLER_TYPE_LABEL: Record<string, string> = {
   dropshipper: "Dropshipping",
 };
 
+/**
+ * THREE states, not two — and the third is the whole reason it exists.
+ *
+ * `verified_revenue` and `verified_margin` both begin with "verified", so the
+ * old `tier.startsWith("verified")` test rendered them IDENTICALLY: same
+ * green, same check, different word. That let the strongest thing we can say
+ * about a profile look exactly like a weaker thing we can say about it, which
+ * is the one confusion this product cannot afford — a seller whose costs we
+ * never checked wore the same badge as a seller whose costs we did.
+ *
+ * The ladder is legible at a glance now:
+ *
+ *   verified_margin   check   green   revenue AND costs checked
+ *   verified_revenue  half    amber   revenue checked, margin modelled
+ *   everything else   ring    grey    nothing checked
+ *
+ * 🚨 SHAPE AND WORD CARRY IT, NOT COLOUR (VerifiedMargins BRANDING.md §5).
+ * The glyph steps filled -> half -> empty and the label states the tier in
+ * words, so the ladder survives a greyscale screenshot and a colour-blind
+ * reader. Colour is the third channel and never the only one.
+ *
+ * Host apps style `[data-badge][data-state]` from their own tokens, so a
+ * brand that defines no amber degrades to an unfilled pill rather than to a
+ * wrong one.
+ */
+function VerificationBadge({
+  verification,
+}: {
+  verification: { tier: string; label: string };
+}) {
+  const state =
+    verification.tier === "verified_margin"
+      ? "verified"
+      : verification.tier === "verified_revenue"
+        ? "partial"
+        : "estimated";
+  const glyph = state === "verified" ? "\u2713" : state === "partial" ? "\u25D1" : "\u25CB";
+  return (
+    <span data-badge="" data-state={state}>
+      {glyph} {verification.label}
+    </span>
+  );
+}
+
 /** One business card.
  *
  *  🚨 THE NAME IS DELIBERATELY UNREADABLE. Sellers will be able to reveal
@@ -381,15 +425,7 @@ function BusinessCard({
               Stealth Brand
             </span>
           )}
-          {business.verification.tier.startsWith("verified") ? (
-            <span data-badge="" data-state="verified">
-              {"\u2713"} {business.verification.label}
-            </span>
-          ) : (
-            <span data-badge="" data-state="estimated">
-              {"\u25CB"} {business.verification.label}
-            </span>
-          )}
+          <VerificationBadge verification={business.verification} />
         </div>
         <p data-business-sub="">
           {sub}
