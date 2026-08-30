@@ -39,7 +39,7 @@
 //      needed the public endpoint widened, and nothing here may ever
 //      ask for that.
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../api";
 import { StatTile } from "../components/ui/StatTile";
 import { TrendChart } from "../components/ui/TrendChart";
@@ -507,7 +507,9 @@ function Businesses({
 // a verification, and spending the badge colour on it would blunt the badge
 // (verifiedmargins-frontend/BRANDING.md §3.1).
 
-type PlotKey = "revenue" | "profit" | "units" | "margin";
+/** The three series a tile can select. SKUs is a tile but not a plot —
+ *  the payload carries a single count, not a series. */
+type PlotKey = "revenue" | "profit" | "margin";
 
 function ProfileDashboard({
   metrics,
@@ -539,22 +541,27 @@ function ProfileDashboard({
 
   // What the seller actually published decides what can be plotted.
   const plots: Array<{ key: PlotKey; label: string; format: (v: number | null) => string }> = [];
+  /* PROFIT, REVENUE, MARGIN — and SKUs beside them, which is not one of
+     these because it has no series (see the tile block below).
+     Profit leads: it is what the site ranks on and what the business page
+     leads with, and a reader moving between the two must not have to re-learn
+     which figure the page is about. `Units` was dropped in the same pass —
+     four tiles is the whole set, and unit count was the least load-bearing
+     of the five. */
   if (hasSales) {
-    plots.push({ key: "revenue", label: "Revenue", format: (v) => money(v, currency) });
     if (plotted.some((p) => p.profit !== null)) {
       plots.push({ key: "profit", label: "Profit", format: (v) => money(v, currency) });
     }
-    plots.push({ key: "units", label: "Units", format: (v) => (v === null ? "—" : Math.round(v).toLocaleString()) });
+    plots.push({ key: "revenue", label: "Revenue", format: (v) => money(v, currency) });
   }
   if (marginSeries) {
     plots.push({ key: "margin", label: "Margin", format: pct });
   }
-  /* Revenue leads. Margin is what the site RANKS on, but revenue is the
-     figure a visitor orients by first — and a chart that opens on a
-     percentage makes a reader hunt for the size before they can read it.
-     Falls back to margin for a profile that publishes margin only, where
-     there is no revenue series to show. */
-  const [plot, setPlot] = useState<PlotKey>(() => (hasSales ? "revenue" : "margin"));
+  /* Opens on the leading tile. Falls back down the same order the tiles are
+     in, so the highlighted tile is never one the reader has to hunt for. */
+  const [plot, setPlot] = useState<PlotKey>(() =>
+    hasSales ? "profit" : marginSeries ? "margin" : "revenue",
+  );
   const active = plots.find((p) => p.key === plot) ?? plots[0];
   if (!active) return null;
 
@@ -568,13 +575,21 @@ function ProfileDashboard({
       }))
     : (marginSeries ?? []).map((p) => ({ date: `${p.month}-01`, value: p.margin_pct }));
 
-  const valueOf = (p: (typeof plotted)[number], key: PlotKey) =>
-    key === "revenue" ? p.revenue : key === "profit" ? p.profit : p.units;
+  /* Only the two money series. `margin` never reaches here — both call sites
+     branch on it first, because a ratio comes off `marginPoints` rather than
+     off a row. Written as an exhaustive pair rather than an `else` so a new
+     PlotKey fails to compile instead of silently plotting revenue. */
+  const valueOf = (p: (typeof plotted)[number], key: "revenue" | "profit") =>
+    key === "revenue" ? p.revenue : p.profit;
 
+  /* Hoisted to a const so the narrowing below survives into the closure —
+     TypeScript will not carry `active.key !== "margin"` through a property
+     access into a callback, which is the compile error this exists to fix. */
+  const activeKey = active.key;
   const points =
-    active.key === "margin"
+    activeKey === "margin"
       ? marginPoints
-      : plotted.map((p) => ({ date: p.date, value: valueOf(p, active.key) }));
+      : plotted.map((p) => ({ date: p.date, value: valueOf(p, activeKey) }));
 
   const spark = (key: PlotKey): Array<number | null> | undefined => {
     if (key === "margin") return marginPoints.map((p) => p.value);
@@ -603,9 +618,7 @@ function ProfileDashboard({
                 ? pct(metrics.last_30d?.margin_pct ?? null)
                 : p.key === "revenue"
                   ? money(metrics.last_30d?.revenue ?? null, currency)
-                  : p.key === "profit"
-                    ? money(metrics.last_30d?.profit ?? null, currency)
-                    : (metrics.last_30d?.units ?? 0).toLocaleString()
+                  : money(metrics.last_30d?.profit ?? null, currency)
             }
             /* No delta chip: a period-over-period change needs a previous
                period, and publishing one the seller did not choose to publish
@@ -616,6 +629,15 @@ function ProfileDashboard({
             onClick={() => setPlot(p.key)}
           />
         ))}
+        {/* 🚨 NOT a selector, and deliberately not made to look like one: the
+            payload carries ONE sku_count, not a series, so there is nothing
+            for a click to plot. Giving it an onClick that changed no chart
+            would be a control that lies about being one. It sits in the row
+            because the four tiles are the set a reader compares — the same
+            four the business page shows. */}
+        {metrics.sku_count !== null && metrics.sku_count !== undefined ? (
+          <StatTile label="SKUs" value={metrics.sku_count.toLocaleString()} delta={null} />
+        ) : null}
       </div>
 
       <p data-chart-label="">
@@ -721,11 +743,25 @@ export function PublicProfileBody({
   status,
 }: PublicProfileBodyProps) {
   const m = profile.metrics;
-  // Businesses whose revenue came from a connected account rather than a
-  // typed-in one — the number the header leads with.
-  const verifiedCount = (m.businesses ?? []).filter((b) =>
-    b.verification.tier.startsWith("verified"),
-  ).length;
+  /* What this person actually has, counted PER TIER rather than lumped into
+     one "verified" total.
+     🚨 "3 businesses with verified revenue" was wrong the moment a profile
+     could hold both tiers: it counted every verified business and then named
+     ONE of the two things they could be verified for, so a portfolio of two
+     per-SKU businesses and one modelled one read as three modelled ones. The
+     header now states each tier with its own badge, which is also what makes
+     the count checkable against the cards below it.
+     Weakest first, matching the ladder on /how-verification-works and the
+     order the leaderboard ranks tiers in. */
+  const tierCounts = ([
+    { tier: "verified_revenue", label: "Verified revenue" },
+    { tier: "verified_margin", label: "Verified margins" },
+  ] as const)
+    .map((t) => ({
+      ...t,
+      count: (m.businesses ?? []).filter((b) => b.verification.tier === t.tier).length,
+    }))
+    .filter((t) => t.count > 0);
   const editing = form != null;
   const patch = <K extends keyof ProfileEditForm>(key: K, value: ProfileEditForm[K]) => {
     if (form && onForm) onForm({ ...form, [key]: value });
@@ -797,14 +833,23 @@ export function PublicProfileBody({
                   rather than as an address. */}
               <span data-handle="">@{profile.username}</span>
             </h1>
-            {/* What this person actually has, in one line. The count is of
-                businesses whose REVENUE we verified — not of businesses —
-                because "3 businesses" says nothing a reader can trust, and
-                that distinction is the entire product. */}
-            {verifiedCount > 0 ? (
+            {/* One line per tier, each carrying the real badge rather than a
+                word describing it: "3 businesses" says nothing a reader can
+                trust, and WHICH verification they have is the entire product.
+                The badge here is the same component the cards below use, so a
+                reader meets one visual vocabulary on the page and the header
+                cannot drift from what the cards say. */}
+            {tierCounts.length > 0 ? (
               <p data-verified-count="">
-                {verifiedCount} {verifiedCount === 1 ? "business" : "businesses"} with verified
-                revenue
+                {tierCounts.map((t, i) => (
+                  <Fragment key={t.tier}>
+                    {i > 0 ? <span data-verified-sep="" aria-hidden="true">·</span> : null}
+                    <span data-verified-group="">
+                      {t.count} {t.count === 1 ? "business" : "businesses"} with{" "}
+                      <VerificationBadge verification={{ tier: t.tier, label: t.label }} />
+                    </span>
+                  </Fragment>
+                ))}
               </p>
             ) : null}
           </span>

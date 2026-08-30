@@ -133,13 +133,28 @@
 //          stretches the link over the whole card.
 //          sellerconnect FEATURE_VM_2026-08-28_business-detail-page.
 //
+// v0.9.16: the verification badge is a three-step ladder — ✓ verified_margin,
+//          ◑ verified_revenue, ○ everything else — so a modelled margin no
+//          longer renders in the same green as a checked one.
+// v0.9.17: the profile shows the SAME FOUR TILES as a business page — Profit,
+//          Revenue, Margin, SKUs, all on the trailing 30 days. `Units` is
+//          gone; SKUs is a tile but NOT a chart selector, because the payload
+//          carries one count rather than a series and a control that plots
+//          nothing is a control that lies. The chart opens on profit, which is
+//          what the site ranks on.
+//          The header line is now one per TIER, each carrying the real badge:
+//          "2 businesses with ◑ Verified revenue · 1 with ✓ Verified margins".
+//          "N businesses with verified revenue" counted every verified
+//          business and then named one of the two things they could be
+//          verified FOR, so a mixed portfolio was described wrongly.
+//
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
 // a brand is actually serving, so a stale value is worse than no value — it
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.15";
+export const SHARED_PACKAGE_VERSION = "0.9.17";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
