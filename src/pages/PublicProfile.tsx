@@ -43,6 +43,7 @@ import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } fr
 import { VerificationBadge } from "../components/VerificationBadge";
 import { ApiError } from "../api";
 import { StatTile } from "../components/ui/StatTile";
+import { dashboardPlots, plotLabel, type PlotKey } from "../lib/dashboard-plots";
 import { TrendChart } from "../components/ui/TrendChart";
 import {
   type WindowKey,
@@ -495,7 +496,7 @@ function Businesses({
 
 /** The three series a tile can select. SKUs is a tile but not a plot —
  *  the payload carries a single count, not a series. */
-type PlotKey = "revenue" | "profit" | "margin";
+
 
 /**
  * The qualifier a margin carries when we did not check it.
@@ -544,90 +545,28 @@ function ProfileDashboard({
   const marginSeries = metrics.margin_series;
   const currency = metrics.display?.currency ?? "USD";
 
-  /* The chart plots DAYS, converted, to agree with the "Last 30 days" heading
-     and the tiles under it. Falls back to the monthly series for a backend
-     that has no `daily` yet — with the caveat that the fallback carries the
-     unconverted per-currency rows this replaced. */
-  const useDaily = Boolean(daily && daily.length > 0);
-  const plotted: Array<{ date: string; revenue: number; units: number; profit: number | null }> =
-    useDaily
-      ? daily!.map((d) => ({ date: d.date, revenue: d.revenue, units: d.units, profit: d.profit }))
-      : (series ?? []).map((p) => ({
-          date: `${p.month}-01`,
-          revenue: p.revenue,
-          units: p.units,
-          profit: p.profit,
-        }));
-  const hasSales = useDaily ? true : Boolean(series);
+  /* WHAT IS PLOTTABLE IS NOT THIS PAGE'S DECISION. It is the same question
+     the business page answers, and the two used to answer it in two places —
+     which is how /business/:slug ended up with no clickable tiles at all
+     while this page had three. lib/dashboard-plots.ts owns it now; this file
+     owns only the LABELS and the hints, which the two pages differ on for
+     real reasons. */
+  const { useDaily, plots, pointsFor, sparkFor } = dashboardPlots({
+    daily,
+    series,
+    marginSeries,
+  });
 
-  // What the seller actually published decides what can be plotted.
-  const plots: Array<{ key: PlotKey; label: string; format: (v: number | null) => string }> = [];
-  /* PROFIT, REVENUE, MARGIN — and SKUs beside them, which is not one of
-     these because it has no series (see the tile block below).
-     Profit leads: it is what the site ranks on and what the business page
-     leads with, and a reader moving between the two must not have to re-learn
-     which figure the page is about. `Units` was dropped in the same pass —
-     four tiles is the whole set, and unit count was the least load-bearing
-     of the five. */
-  const hasProfit = plotted.some((p) => p.profit !== null);
-  if (hasSales && hasProfit) {
-    plots.push({ key: "profit", label: "Profit", format: (v) => money(v, currency) });
-  }
-  if (hasSales) {
-    plots.push({ key: "revenue", label: "Revenue", format: (v) => money(v, currency) });
-  }
-  /* Margin is a RATIO OF TWO SERIES WE ALREADY HAVE when the rows are daily,
-     so `margin_series` being absent is not a reason to make the tile inert.
-     The backend sends it only for the monthly fallback — every daily profile
-     has `margin_series: null` — and gating on it left the Margin tile with no
-     sparkline and no click on exactly the profiles that could plot it.
-     Derived here from the same `plotted` rows as `marginPoints` below; keep
-     the two conditions in step, or the tile becomes a control for an empty
-     chart. */
-  const canPlotMargin = useDaily
-    ? plotted.some((p) => p.profit !== null && p.revenue)
-    : Boolean(marginSeries);
-  if (canPlotMargin) {
-    plots.push({ key: "margin", label: "Margin", format: pct });
-  }
   /* Opens on the leading tile that is ACTUALLY plottable. Reaching for
      "profit" unconditionally left `plot` pointing at a tile that was not
      rendered on a profile with no costs, so nothing looked selected. */
   const [plot, setPlot] = useState<PlotKey | null>(null);
-  const active = plots.find((p) => p.key === plot) ?? plots[0];
-  if (!active) return null;
+  const activeKey = plots.includes(plot as PlotKey) ? (plot as PlotKey) : plots[0];
+  if (!activeKey) return null;
 
-  /* Margin comes off the same rows as everything else when they are daily —
-     a ratio needs no conversion, and deriving it here keeps all four plots on
-     one x-axis. Only the monthly fallback reaches for margin_series. */
-  const marginPoints = useDaily
-    ? plotted.map((p) => ({
-        date: p.date,
-        value: p.profit !== null && p.revenue ? (p.profit / p.revenue) * 100 : null,
-      }))
-    : (marginSeries ?? []).map((p) => ({ date: `${p.month}-01`, value: p.margin_pct }));
-
-  /* Only the two money series. `margin` never reaches here — both call sites
-     branch on it first, because a ratio comes off `marginPoints` rather than
-     off a row. Written as an exhaustive pair rather than an `else` so a new
-     PlotKey fails to compile instead of silently plotting revenue. */
-  const valueOf = (p: (typeof plotted)[number], key: "revenue" | "profit") =>
-    key === "revenue" ? p.revenue : p.profit;
-
-  /* Hoisted to a const so the narrowing below survives into the closure —
-     TypeScript will not carry `active.key !== "margin"` through a property
-     access into a callback, which is the compile error this exists to fix. */
-  const activeKey = active.key;
-  const points =
-    activeKey === "margin"
-      ? marginPoints
-      : plotted.map((p) => ({ date: p.date, value: valueOf(p, activeKey) }));
-
-  const spark = (key: PlotKey): Array<number | null> | undefined => {
-    if (key === "margin") return marginPoints.map((p) => p.value);
-    if (!hasSales) return undefined;
-    return plotted.map((p) => valueOf(p, key));
-  };
+  const format = (key: PlotKey) => (v: number | null) =>
+    key === "margin" ? pct(v) : money(v, currency);
+  const points = pointsFor(activeKey);
 
   return (
     <section data-profile-dashboard="">
@@ -703,7 +642,9 @@ function ProfileDashboard({
         )
           .filter((t) => !("hideWhenEmpty" in t && t.hideWhenEmpty))
           .map((t) => {
-            const plottable = plots.find((p) => p.key === t.key);
+            const plottable = (plots as string[]).includes(t.key)
+              ? (t.key as PlotKey)
+              : null;
           return (
             <StatTile
               key={t.key}
@@ -714,9 +655,9 @@ function ProfileDashboard({
                  publish is the same mistake as a comparison line. */
               delta={null}
               tag={"tag" in t ? t.tag : undefined}
-              spark={plottable ? spark(plottable.key) : undefined}
-              selected={plottable ? plottable.key === active.key : false}
-              onClick={plottable ? () => setPlot(plottable.key) : undefined}
+              spark={plottable ? sparkFor(plottable) : undefined}
+              selected={plottable ? plottable === activeKey : false}
+              onClick={plottable ? () => setPlot(plottable) : undefined}
             />
           );
         })}
@@ -724,7 +665,7 @@ function ProfileDashboard({
 
       <p data-chart-label="">
         <small>
-          {active.label}{" "}
+          {plotLabel(activeKey)}{" "}
           {useDaily
             ? `by day, ${(windowLabel ?? "last 30 days").toLowerCase()}`
             : `by month, last ${windowMonths} months`}
@@ -733,8 +674,8 @@ function ProfileDashboard({
       <div data-chart="">
         <TrendChart
           points={points}
-          format={active.format}
-          label={active.label}
+          format={format(activeKey)}
+          label={plotLabel(activeKey)}
           formatDate={(iso) =>
             new Date(iso).toLocaleDateString(
               undefined,

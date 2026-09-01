@@ -231,6 +231,13 @@
 //          as an accusation against a seller who answered the question we
 //          asked. The hover explainer is unchanged.
 
+// v0.9.34: `dashboardPlots` — which tiles are CONTROLS, decided once and
+//          exported. The founder profile and the business page answered it
+//          in two places and disagreed: /:username had three clickable
+//          tiles driving its chart, /business/:slug had none and a chart
+//          hardwired to Revenue. Each page still owns its own labels and
+//          hints; neither owns what is plottable any more.
+
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
 // a brand is actually serving, so a stale value is worse than no value — it
@@ -242,7 +249,7 @@
 //          lock, so the gate had to be spelled with an emoji. Locked options
 //          carry a lock icon; the selected one carries a check.
 
-export const SHARED_PACKAGE_VERSION = "0.9.33";
+export const SHARED_PACKAGE_VERSION = "0.9.34";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -505,4 +512,11 @@ export {
   AMAZON_MARK_SRC,
   UNVERIFIED_MARGIN_TAG,
 } from "./pages/PublicProfile";
+
+/* WHICH TILES ARE CONTROLS, shared between the founder profile and the
+   business page. Exported because those two live in different repos and
+   answered it differently for months — /business/:slug made none of its
+   tiles clickable at all. The pages still own their own labels and hints. */
+export { dashboardPlots, plotLabel } from "./lib/dashboard-plots";
+export type { PlotKey, PlotSource, DashboardPlots } from "./lib/dashboard-plots";
 export type { ProfileOwnerProps, PublicProfilePageProps } from "./pages/PublicProfile";
