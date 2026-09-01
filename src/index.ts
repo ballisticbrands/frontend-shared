@@ -211,7 +211,7 @@
 //          it: a hint explains a missing number, a tag says the number is
 //          there and we are not vouching for it.
 
-// v0.9.30: a profile bio keeps its LINE BREAKS. It rendered in a plain <p>,
+// v0.9.31: a profile bio keeps its LINE BREAKS. It rendered in a plain <p>,
 //          which collapses every newline into a space — and people write
 //          lists in a bio, so a five-line one became one run-on sentence.
 //          The <p> carries `data-profile-bio` and the host sets
@@ -229,7 +229,7 @@
 //          lock, so the gate had to be spelled with an emoji. Locked options
 //          carry a lock icon; the selected one carries a check.
 
-export const SHARED_PACKAGE_VERSION = "0.9.30";
+export const SHARED_PACKAGE_VERSION = "0.9.31";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
