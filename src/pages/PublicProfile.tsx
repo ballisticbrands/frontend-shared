@@ -621,8 +621,16 @@ function ProfileDashboard({
           rather than fixed. Publishing day-level revenue is a deliberate
           trade (see dailySeries in the backend's public-profile.ts): days
           expose launch timing, promo cadence and stockouts. */}
-      <h2>{windowLabel ?? "Last 30 days"}</h2>
-      {picker}
+      {/* The picker IS the heading. It names the same thing the <h2> did and
+          is the only way to change it, so two of them would be one label and
+          one control saying the same words. The heading stays for structure,
+          for a screen reader and for a page with no picker at all. */}
+      <div data-dashboard-head="">
+        <h2 className={picker ? "vm-visually-hidden" : undefined}>
+          {windowLabel ?? "Last 30 days"}
+        </h2>
+        {picker}
+      </div>
 
       {/* FOUR TILES, ALWAYS THE SAME FOUR — the set the business page shows,
           so a reader moving between the two pages does not have to re-learn
@@ -1138,6 +1146,52 @@ export function PublicProfileBody({
  * invisible and the offer unmakeable — the whole point is that a reader can
  * see what connecting their own business would unlock.
  */
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" data-window-chevron="">
+      <path d="M4 6.5L8 10.5L12 6.5" fill="none" stroke="currentColor" strokeWidth="1.6"
+        strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+      <rect x="3.5" y="7" width="9" height="6.5" rx="1.4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M5.75 7V5.25a2.25 2.25 0 0 1 4.5 0V7" fill="none" stroke="currentColor"
+        strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+      <path d="M3.5 8.5L6.5 11.5L12.5 5" fill="none" stroke="currentColor" strokeWidth="1.8"
+        strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/**
+ * The window selector — and the dashboard's heading, which it replaces.
+ *
+ * 🚨 WHICH OPTIONS ARE LOCKED IS SESSION KNOWLEDGE, and this file is
+ * deliberately session-free — it renders public data for crawlers too. So the
+ * host passes the ANSWER (`unlocked`) rather than the question, exactly as it
+ * does for `owner`.
+ *
+ * Not a <select>. A native one cannot draw a lock inside an option, so the
+ * gate would have to be spelled with an emoji in the label — which reads as a
+ * typo at small sizes and cannot be styled to look deliberate. This is a
+ * button plus a listbox, which costs the focus and Escape handling below and
+ * buys an affordance that looks like the rest of the product.
+ *
+ * Locked options RENDER, locked. Hiding them would make the gate invisible
+ * and the offer unmakeable — the point is that a reader can see what
+ * connecting their own business would open.
+ */
 function WindowPicker({
   value,
   options,
@@ -1151,33 +1205,73 @@ function WindowPicker({
   onPick: (k: WindowKey) => void;
   onLockedPick?: (k: WindowKey) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const current = options.find((o) => o.value === value)?.label ?? "Last 30 days";
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    /* Pointerdown, not click: a click listener closes the menu before the
+       option's own handler runs on some browsers, so picking would do
+       nothing. */
+    const onDown = (e: Event) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown);
+    };
+  }, [open]);
+
   return (
-    <span data-window-picker="">
-      <label>
-        <span className="vm-visually-hidden">Window</span>
-        <select
-          value={value}
-          data-window-select=""
-          onChange={(e) => {
-            const next = e.target.value as WindowKey;
-            if (unlocked.includes(next)) onPick(next);
-            /* A locked pick must not change the board underneath the dialog —
-               the reader has not earned that view, and leaving it selected
-               would show them the answer while asking them to pay for it. */
-            else onLockedPick?.(next);
-          }}
-        >
+    <div data-window-picker="" ref={root}>
+      <button
+        type="button"
+        data-window-trigger=""
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span>{current}</span>
+        <ChevronIcon />
+      </button>
+
+      {open ? (
+        <ul data-window-menu="" role="listbox" aria-label="Window">
           {options.map((o) => {
             const locked = !unlocked.includes(o.value);
+            const selected = o.value === value;
             return (
-              <option key={o.value} value={o.value}>
-                {locked ? `🔒 ${o.label}` : o.label}
-              </option>
+              <li key={o.value}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  data-locked={locked ? "" : undefined}
+                  data-selected={selected ? "" : undefined}
+                  onClick={() => {
+                    setOpen(false);
+                    /* A locked pick must not move the board underneath the
+                       dialog: showing the answer while asking someone to pay
+                       for it is worse than not showing it. */
+                    if (locked) onLockedPick?.(o.value);
+                    else onPick(o.value);
+                  }}
+                >
+                  <span>{o.label}</span>
+                  {locked ? <LockIcon /> : selected ? <CheckIcon /> : null}
+                </button>
+              </li>
             );
           })}
-        </select>
-      </label>
-    </span>
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
