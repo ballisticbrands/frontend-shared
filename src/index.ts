@@ -211,6 +211,13 @@
 //          it: a hint explains a missing number, a tag says the number is
 //          there and we are not vouching for it.
 
+// v0.9.30: a profile bio keeps its LINE BREAKS. It rendered in a plain <p>,
+//          which collapses every newline into a space — and people write
+//          lists in a bio, so a five-line one became one run-on sentence.
+//          The <p> carries `data-profile-bio` and the host sets
+//          white-space: pre-line; the text is still interpolated, never
+//          dangerouslySet, so markup in a bio stays inert.
+
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
 // a brand is actually serving, so a stale value is worse than no value — it
