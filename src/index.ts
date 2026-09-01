@@ -217,7 +217,12 @@
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.29";
+// v0.9.30: the window picker becomes the dashboard's heading, and a real
+//          listbox rather than a <select> — a native option cannot draw a
+//          lock, so the gate had to be spelled with an emoji. Locked options
+//          carry a lock icon; the selected one carries a check.
+
+export const SHARED_PACKAGE_VERSION = "0.9.30";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

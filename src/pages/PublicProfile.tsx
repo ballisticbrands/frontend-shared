@@ -1008,7 +1008,13 @@ export function PublicProfileBody({
              that used to follow — per-business badges replaced the
              profile-wide one, so the paragraph explaining a single tier had
              nothing left to explain. */
-          <>{profile.bio ? <p>{profile.bio}</p> : null}</>
+          /* `data-profile-bio` so the host can set `white-space: pre-line`.
+             A bio is a textarea's worth of text and people write LISTS in it —
+             ggballas's is five bulleted lines — and an ordinary <p> collapses
+             every newline into a space, turning that into one run-on
+             sentence. The text is interpolated, never dangerouslySet: line
+             breaks are honoured by CSS, and markup in a bio stays inert. */
+          <>{profile.bio ? <p data-profile-bio="">{profile.bio}</p> : null}</>
         )}
 
         {/* 🚨 THERE IS NO STANDALONE MARGIN SECTION, deliberately (removed
