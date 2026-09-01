@@ -225,6 +225,12 @@
 //          derived from the same daily rows as Profit. Still not a control
 //          when no day carries profit: there would be nothing to draw.
 
+// v0.9.33: the margin tag reads "User-supplied" rather than "unverified".
+//          Both are true; the first names WHERE the number came from, the
+//          second only says what we did not do to it — and it does not read
+//          as an accusation against a seller who answered the question we
+//          asked. The hover explainer is unchanged.
+
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
 // a brand is actually serving, so a stale value is worse than no value — it
@@ -236,7 +242,7 @@
 //          lock, so the gate had to be spelled with an emoji. Locked options
 //          carry a lock icon; the selected one carries a check.
 
-export const SHARED_PACKAGE_VERSION = "0.9.32";
+export const SHARED_PACKAGE_VERSION = "0.9.33";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

@@ -512,7 +512,13 @@ type PlotKey = "revenue" | "profit" | "margin";
  * tier appears.
  */
 export const UNVERIFIED_MARGIN_TAG = {
-  label: "unverified",
+  /* "User-supplied", not "unverified". Both are true, but the first names
+     WHERE the number came from and the second only says what we did not do
+     to it — and a reader who has to guess at the gap will guess wrong in
+     either direction. It also does not read as an accusation against a
+     seller who did nothing but answer the question we asked. The hover
+     still spells out that we have not checked it. */
+  label: "User-supplied",
   title: "User-reported metric, unverified by VerifiedMargins.com",
 } as const;
 

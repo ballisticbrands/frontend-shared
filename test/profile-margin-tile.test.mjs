@@ -1,4 +1,4 @@
-// The Margin tile on the profile dashboard: its "unverified" tag, and the
+// The Margin tile on the profile dashboard: its "User-supplied" tag, and the
 // fact that it is a CONTROL.
 //
 // Two separate promises, easy to break independently:
@@ -114,7 +114,12 @@ function marginTile(html) {
 test("a margin we did not verify is tagged, with the explainer on hover", () => {
   const tile = marginTile(render(profile({ tier: "verified_revenue" })));
   assert.match(tile, /data-stat-tag/, "the tag is missing from a verified_revenue margin");
-  assert.match(tile, new RegExp(UNVERIFIED_MARGIN_TAG.label));
+  /* The literal, not `UNVERIFIED_MARGIN_TAG.label` — asserting a constant
+     against itself passes whatever it is changed to. The wording is the
+     product here: "User-supplied" names where the figure came from, where
+     "unverified" only says what we did not do to it. */
+  assert.match(tile, />User-supplied</);
+  assert.equal(UNVERIFIED_MARGIN_TAG.label, "User-supplied");
   assert.match(
     tile,
     /title="User-reported metric, unverified by VerifiedMargins\.com"/,
@@ -155,7 +160,7 @@ test("with no profit on any day there is no margin to plot, and no control", () 
 
 test("the tag sits inside the control, so clicking it selects the tile", () => {
   // The tag is a <span> within the <button>: a click on the words
-  // "unverified" bubbles to the tile rather than being swallowed. If it ever
+  // "User-supplied" bubbles to the tile rather than being swallowed. If it ever
   // moves out of the button, this fails.
   const tile = marginTile(render(profile()));
   const tagAt = tile.indexOf("data-stat-tag");
