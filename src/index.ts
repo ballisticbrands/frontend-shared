@@ -263,7 +263,12 @@
 //          are positional, so the byte-for-byte stranger/owner test now
 //          strips them by name rather than being relaxed.
 
-export const SHARED_PACKAGE_VERSION = "0.9.36";
+// v0.9.37: valueBusiness() — the valuation, as a PURE function. One
+//          implementation for the wizard's live preview and the backend's
+//          stored figure; a second copy would drift, and the day the two
+//          disagree is the day the central number stops being believable.
+
+export const SHARED_PACKAGE_VERSION = "0.9.37";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -453,6 +458,9 @@ export {
   VISIBILITY_FIELDS,
   WINDOW_OPTIONS,
 } from "./lib/profiles";
+export type { Adjustment, Valuation, ValuationInputs } from "./lib/valuation";
+export { valueBusiness, VALUATION_VERSION } from "./lib/valuation";
+
 export type { WindowKey,
   AvatarUploadResult,
   Profile,
