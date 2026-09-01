@@ -238,6 +238,12 @@
 //          hardwired to Revenue. Each page still owns its own labels and
 //          hints; neither owns what is plottable any more.
 
+// v0.9.35: export WindowPicker, so the business page mounts the SAME window
+//          selector as a founder profile instead of a lookalike. It is a
+//          button plus a listbox rather than a <select> because a native
+//          option cannot draw a lock, and a second copy of that would drift
+//          from this one the first time the gate changed.
+
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
 // a brand is actually serving, so a stale value is worse than no value — it
@@ -249,7 +255,7 @@
 //          lock, so the gate had to be spelled with an emoji. Locked options
 //          carry a lock icon; the selected one carries a check.
 
-export const SHARED_PACKAGE_VERSION = "0.9.34";
+export const SHARED_PACKAGE_VERSION = "0.9.35";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -511,6 +517,13 @@ export {
   ShareButton,
   AMAZON_MARK_SRC,
   UNVERIFIED_MARGIN_TAG,
+  /* The window selector itself, so the BUSINESS page can mount the same
+     control rather than a lookalike. It is a button plus a listbox precisely
+     because a native <select> cannot draw a lock inside an option, and a
+     second implementation of that would drift from this one the first time
+     the gate changed. Locked options still render, locked: the point is that
+     a reader can see what connecting their own business would open. */
+  WindowPicker,
 } from "./pages/PublicProfile";
 
 /* WHICH TILES ARE CONTROLS, shared between the founder profile and the

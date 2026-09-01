@@ -1156,7 +1156,7 @@ function CheckIcon() {
  * and the offer unmakeable — the point is that a reader can see what
  * connecting their own business would open.
  */
-function WindowPicker({
+export function WindowPicker({
   value,
   options,
   unlocked,
