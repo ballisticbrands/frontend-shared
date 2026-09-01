@@ -194,6 +194,9 @@
 //          so the host passes `unlockedWindows` and `onLockedWindow` rather
 //          than this page deciding; locked options render locked rather than
 //          hidden, because a gate nobody can see is an offer nobody can take.
+// v0.9.27: export WindowKey + WINDOW_OPTIONS. 0.9.26 shipped the props that
+//          take them without the types to build them, so a host could not
+//          name what it was passing.
 
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
@@ -201,7 +204,7 @@
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.26";
+export const SHARED_PACKAGE_VERSION = "0.9.27";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -389,8 +392,9 @@ export {
   SELLER_TYPES,
   SOCIAL_FIELDS,
   VISIBILITY_FIELDS,
+  WINDOW_OPTIONS,
 } from "./lib/profiles";
-export type {
+export type { WindowKey,
   AvatarUploadResult,
   Profile,
   ProfileDetail,
