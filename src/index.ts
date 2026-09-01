@@ -197,6 +197,10 @@
 // v0.9.27: export WindowKey + WINDOW_OPTIONS. 0.9.26 shipped the props that
 //          take them without the types to build them, so a host could not
 //          name what it was passing.
+// v0.9.28: 🚨 the dashboard's render guard listed only the MONTHLY series, so
+//          a day-grained window — which nulls it by design — took the tiles,
+//          the chart AND the picker with it. 7d and 30d rendered a profile
+//          with no dashboard at all.
 
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
@@ -204,7 +208,7 @@
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.27";
+export const SHARED_PACKAGE_VERSION = "0.9.28";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

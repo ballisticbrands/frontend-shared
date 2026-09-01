@@ -984,7 +984,11 @@ export function PublicProfileBody({
             hiding it from the public view. */}
         {owner && m.margin_note ? <p data-owner-note="">{m.margin_note}</p> : null}
 
-        {m.series || m.margin_series ? (
+        {/* `daily` counts too. This guard predated it and listed only the
+            MONTHLY series, so a day-grained window — which nulls both of
+            those by design — took the entire dashboard with it: no tiles, no
+            chart, no picker to get back out with. */}
+        {m.series || m.margin_series || m.daily ? (
           <ProfileDashboard
             metrics={m}
             windowMonths={profile.window.months}
