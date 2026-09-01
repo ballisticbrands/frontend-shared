@@ -570,7 +570,18 @@ function ProfileDashboard({
   if (hasSales) {
     plots.push({ key: "revenue", label: "Revenue", format: (v) => money(v, currency) });
   }
-  if (marginSeries) {
+  /* Margin is a RATIO OF TWO SERIES WE ALREADY HAVE when the rows are daily,
+     so `margin_series` being absent is not a reason to make the tile inert.
+     The backend sends it only for the monthly fallback — every daily profile
+     has `margin_series: null` — and gating on it left the Margin tile with no
+     sparkline and no click on exactly the profiles that could plot it.
+     Derived here from the same `plotted` rows as `marginPoints` below; keep
+     the two conditions in step, or the tile becomes a control for an empty
+     chart. */
+  const canPlotMargin = useDaily
+    ? plotted.some((p) => p.profit !== null && p.revenue)
+    : Boolean(marginSeries);
+  if (canPlotMargin) {
     plots.push({ key: "margin", label: "Margin", format: pct });
   }
   /* Opens on the leading tile that is ACTUALLY plottable. Reaching for

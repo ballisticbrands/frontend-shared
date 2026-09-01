@@ -218,6 +218,13 @@
 //          white-space: pre-line; the text is still interpolated, never
 //          dangerouslySet, so markup in a bio stays inert.
 
+// v0.9.32: the Margin tile PLOTS. It was gated on `metrics.margin_series`,
+//          which the backend sends only for the monthly fallback — so on
+//          every daily profile it rendered inert: no sparkline, no click.
+//          Margin is a ratio of two series already on the page, so it is
+//          derived from the same daily rows as Profit. Still not a control
+//          when no day carries profit: there would be nothing to draw.
+
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
 // a brand is actually serving, so a stale value is worse than no value — it
@@ -229,7 +236,7 @@
 //          lock, so the gate had to be spelled with an emoji. Locked options
 //          carry a lock icon; the selected one carries a check.
 
-export const SHARED_PACKAGE_VERSION = "0.9.31";
+export const SHARED_PACKAGE_VERSION = "0.9.32";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
