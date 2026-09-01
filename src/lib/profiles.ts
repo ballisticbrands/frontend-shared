@@ -75,6 +75,14 @@ export interface ProfileDetail extends Profile {
 export interface ProfileConnection {
   id: string;
   provider: string;
+  /** The business's PUBLIC address (/business/<slug>), or null for a
+   *  connection with no page (an ads account). Already on the wire; declared
+   *  here so a host can match the business page it is rendering against the
+   *  caller's OWN connections — which is how that page learns it is editable
+   *  without a new endpoint. */
+  slug?: string | null;
+  /** What kind of business ("amazon_fba"), as opposed to `provider`. */
+  type?: string;
   /** The REAL account name where one is known — the SP-API storefront name or
    *  the Ads profile's account name — falling back to the generic provider
    *  label. See connectionToWire in the backend's routes/profiles.ts. */

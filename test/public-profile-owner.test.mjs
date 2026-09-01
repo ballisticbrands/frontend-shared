@@ -139,12 +139,29 @@ function render(props) {
  *  the part that must not depend on who is looking. */
 const publicPart = (html) => html.slice(html.indexOf("<main"));
 
+/** Owner affordances that must sit INSIDE <main> because they are positional:
+ *  a pencil belongs on the card it edits, and "add another business" belongs
+ *  in the row of businesses it adds to. Stripping them by their own hooks
+ *  keeps the byte-for-byte comparison below strict — it is not a licence for
+ *  arbitrary owner content in <main>, only for these two, named. */
+const stripOwnerAffordances = (html) =>
+  html
+    .replace(/<a data-business-edit="".*?<\/a>/gs, "")
+    .replace(/<button type="button" data-business-add="".*?<\/button>/gs, "");
+
+test("a stranger sees NO owner affordance at all", () => {
+  const stranger = render({ owner: null });
+  for (const hook of ["data-business-edit", "data-business-add"]) {
+    assert.ok(!stranger.includes(hook), `a stranger's render contained ${hook}`);
+  }
+});
+
 test("a non-owner's render is UNCHANGED — byte for byte — by the owner's editor", () => {
   const stranger = render({ owner: null });
   const ownerViewing = render({ owner: OWNER });
 
   assert.equal(
-    publicPart(ownerViewing),
+    stripOwnerAffordances(publicPart(ownerViewing)),
     stranger,
     "The public part of the page differs between a stranger and an owner in view " +
       "mode. Owner chrome belongs OUTSIDE <main> (see PublicProfile.tsx) precisely " +
@@ -204,7 +221,9 @@ test("edit mode exposes exactly the fields the payload already carries", () => {
   const html = render({ owner: OWNER, form: editFormFrom(PROFILE) });
 
   // The six editable fields, by the ids the labels point at.
-  for (const id of ["vm-display-name", "vm-bio", "vm-seller-type", "vm-website"]) {
+  // No vm-seller-type: seller type is a property of a BUSINESS and is edited
+  // there. The founder's value is derived from their connections.
+  for (const id of ["vm-display-name", "vm-bio", "vm-website"]) {
     assert.ok(html.includes(`id="${id}"`), `edit mode is missing ${id}`);
   }
   for (const s of SOCIAL_FIELDS) {
@@ -236,7 +255,6 @@ test("edit mode offers NOTHING the payload does not already carry", () => {
   assert.deepEqual(ids, [
     "vm-bio",
     "vm-display-name",
-    "vm-seller-type",
     ...SOCIAL_FIELDS.map((s) => `vm-social-${s.key}`),
     "vm-website",
   ].sort());

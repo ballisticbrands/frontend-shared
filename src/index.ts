@@ -255,7 +255,15 @@
 //          lock, so the gate had to be spelled with an emoji. Locked options
 //          carry a lock icon; the selected one carries a check.
 
-export const SHARED_PACKAGE_VERSION = "0.9.35";
+// v0.9.36: the founder's edit form drops "What kind of seller are you?" —
+//          seller type is a property of a BUSINESS and is edited there; the
+//          founder's value is derived from their connections. Owner-only
+//          affordances arrive on the businesses row: a pencil per card and an
+//          "add another business" card. Both sit INSIDE <main> because they
+//          are positional, so the byte-for-byte stranger/owner test now
+//          strips them by name rather than being relaxed.
+
+export const SHARED_PACKAGE_VERSION = "0.9.36";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";

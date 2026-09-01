@@ -48,7 +48,6 @@ import { TrendChart } from "../components/ui/TrendChart";
 import {
   type WindowKey,
   WINDOW_OPTIONS,
-  SELLER_TYPES,
   SOCIAL_FIELDS,
   VISIBILITY_FIELDS,
   fetchProfilePreview,
@@ -114,6 +113,9 @@ export interface PublicProfilePageProps {
    *  host resolves it — see WindowPicker. Omitted means every window is open,
    *  which is right for a host that has no gate. */
   unlockedWindows?: readonly WindowKey[];
+  /** Owner clicked "Add another business" on the businesses row. Rendered
+   *  only for an owner; the host owns the dialog it opens. */
+  onAddBusiness?: () => void;
   /** A locked window was picked. The host's slot for whatever the gate is —
    *  on VerifiedMargins, the "add your business" dialog. */
   onLockedWindow?: (key: WindowKey) => void;
@@ -383,12 +385,23 @@ const SELLER_TYPE_LABEL: Record<string, string> = {
  *  A plain <a>, not a router Link: this page has no react-router dependency
  *  and is rendered outside a Router by its tests, and a full navigation is
  *  what serves the per-business prerender with its own title and OG card. */
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+      <path d="M11.2 2.6l2.2 2.2-7.6 7.6-2.9.7.7-2.9 7.6-7.6z" fill="none" stroke="currentColor"
+        strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function BusinessCard({
   business,
   currency,
+  isOwner,
 }: {
   business: PublicProfile["metrics"]["businesses"][number];
   currency: string;
+  isOwner?: boolean;
 }) {
   const sub = [business.label, business.seller_type ? SELLER_TYPE_LABEL[business.seller_type] : null]
     .filter(Boolean)
@@ -416,6 +429,16 @@ function BusinessCard({
             <span data-business-name="">{business.label}</span>
           )}
           <VerificationBadge verification={business.verification} />
+          {/* The card already links to the business page; this says the page
+              is EDITABLE, which a plain link does not. Only for an owner, and
+              only where a page exists to edit — a pencil pointing nowhere is
+              worse than no pencil. */}
+          {isOwner && business.page ? (
+            <a data-business-edit="" href={`/business/${business.page.slug}`}>
+              <PencilIcon />
+              <span>Edit</span>
+            </a>
+          ) : null}
         </div>
         <p data-business-sub="">
           {sub}
@@ -449,24 +472,40 @@ function Businesses({
   rows,
   currency,
   ownerName,
+  isOwner,
+  onAddBusiness,
 }: {
   rows: PublicProfile["metrics"]["businesses"];
   currency: string;
   ownerName: string;
+  /** Viewer owns this profile. Session knowledge, resolved by the host. */
+  isOwner?: boolean;
+  onAddBusiness?: () => void;
 }) {
-  if (!rows || rows.length === 0) return null;
+  /* An owner with no businesses still gets the section: the add card IS the
+     empty state, and hiding it would leave them nowhere to start. */
+  if ((!rows || rows.length === 0) && !isOwner) return null;
   return (
     <section data-profile-businesses="">
       <h2>Businesses by {ownerName}</h2>
-      {rows.map((b) => (
+      {(rows ?? []).map((b) => (
         <BusinessCard
           // The slug is the only genuinely unique key here: a seller with two
           // Amazon accounts in the same marketplaces collided on the old one.
           key={b.page?.slug ?? `${b.platform}-${b.markets.join(",")}`}
           business={b}
           currency={currency}
+          isOwner={isOwner}
         />
       ))}
+      {isOwner && onAddBusiness ? (
+        /* A card, not a button below the row: it sits in the same grid as the
+           businesses so "one more of these" is the obvious reading. */
+        <button type="button" data-business-add="" onClick={onAddBusiness}>
+          <span data-business-add-plus="" aria-hidden="true">+</span>
+          <span>Add another business</span>
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -729,6 +768,8 @@ export interface PublicProfileBodyProps {
   /** Rendered in the dashboard header. Session-dependent, so the container
    *  builds it and this component only places it. */
   picker?: React.ReactNode;
+  /** Owner clicked "Add another business". The host owns the dialog. */
+  onAddBusiness?: () => void;
   actions?: ReactNode;
   /** See PublicProfilePageProps.breadcrumb — placed by the header, supplied
    *  by the host. */
@@ -761,6 +802,7 @@ export interface PublicProfileBodyProps {
 export function PublicProfileBody({
   profile,
   picker,
+  onAddBusiness,
   actions,
   breadcrumb,
   owner,
@@ -941,22 +983,13 @@ export function PublicProfileBody({
               <br />
               <small>{form.bio.length}/500</small>
             </p>
-            <p>
-              <label htmlFor="vm-seller-type">What kind of seller are you?</label>
-              <br />
-              <select
-                id="vm-seller-type"
-                value={form.sellerType}
-                onChange={(e) => patch("sellerType", e.target.value as SellerType | "")}
-              >
-                <option value="">Not saying</option>
-                {SELLER_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </p>
+            {/* No seller-type field. It is a property of a BUSINESS — how
+                that connection sources its inventory — and Connection.sellerType
+                already carries it per business; the founder's value is derived
+                from them now (sellerTypeFromConnections in the backend). A
+                founder running private label AND wholesale has no single
+                answer, so asking them for one invited a wrong one. It is
+                edited on the business, where it belongs. */}
           </div>
         ) : (
           /* Bio only. The seller-type tag ("private label") was here and is
@@ -1013,6 +1046,8 @@ export function PublicProfileBody({
           rows={m.businesses}
           currency={m.display?.currency ?? "USD"}
           ownerName={profile.display_name ?? `@${profile.username}`}
+          isOwner={Boolean(owner)}
+          onAddBusiness={onAddBusiness}
         />
 
 
@@ -1247,6 +1282,7 @@ export function PublicProfilePage({
   defaultMonths = 12,
   unlockedWindows,
   onLockedWindow,
+  onAddBusiness,
   defaultCurrency = "USD",
   onLoaded,
   breadcrumb,
@@ -1358,6 +1394,7 @@ export function PublicProfilePage({
 
   return (
     <PublicProfileBody
+      onAddBusiness={onAddBusiness}
       picker={
         <WindowPicker
           value={windowKey}
