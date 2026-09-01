@@ -30,6 +30,19 @@ export interface StatTileProps {
   spark?: Array<number | null>;
   /** Explains a "—" value, or adds context. Shown as a title tooltip. */
   hint?: string;
+  /**
+   * A qualifier on the FIGURE ITSELF, beside the label — "unverified" on a
+   * margin we did not check.
+   *
+   * 🚨 It is not a second `hint`. A hint explains why a number is missing or
+   * how to read it; a tag says the number is there and we are not vouching
+   * for it. That distinction is the product, so it gets its own affordance
+   * rather than being buried in prose the reader may not open.
+   *
+   * `title` is the hover explainer — BRANDING.md §5: a badge that cannot be
+   * interrogated is decoration.
+   */
+  tag?: { label: string; title?: string };
   /** Marks the tile the page leads with — bigger figure, no border. */
   emphasis?: boolean;
   onClick?: () => void;
@@ -49,6 +62,7 @@ export function StatTile({
   higherIsBetter = true,
   spark,
   hint,
+  tag,
   emphasis = false,
   onClick,
   selected = false,
@@ -72,8 +86,18 @@ export function StatTile({
       ].join(" ")}
       aria-pressed={interactive ? selected : undefined}
     >
-      <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
-        {label}
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+          {label}
+        </span>
+        {tag && (
+          /* `data-stat-tag` rather than a colour class: the host owns the
+             palette, and a tile that is merely QUALIFIED must not shout like
+             an error. */
+          <span data-stat-tag="" title={tag.title}>
+            {tag.label}
+          </span>
+        )}
       </span>
 
       <span className="flex items-baseline gap-2">

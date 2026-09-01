@@ -497,14 +497,36 @@ function Businesses({
  *  the payload carries a single count, not a series. */
 type PlotKey = "revenue" | "profit" | "margin";
 
+/**
+ * The qualifier a margin carries when we did not check it.
+ *
+ * 🚨 ONLY `verified_margin` MEANS THE MARGIN WAS VERIFIED. `verified_revenue`
+ * means the REVENUE came from Amazon and the cost side is a percentage the
+ * seller supplied — so the margin computed from it is theirs, not ours, and a
+ * page that shows it beside a green tick is letting a checked figure vouch for
+ * an unchecked one. That is the single misreading this product cannot afford.
+ *
+ * Written as "anything that is not verified_margin" rather than "if
+ * verified_revenue": self_reported, mixed and unverified all have unchecked
+ * margins too, and a rule phrased as a whitelist cannot under-warn when a new
+ * tier appears.
+ */
+export const UNVERIFIED_MARGIN_TAG = {
+  label: "unverified",
+  title: "User-reported metric, unverified by VerifiedMargins.com",
+} as const;
+
 function ProfileDashboard({
   metrics,
   windowMonths,
   windowLabel,
   picker,
+  verificationTier,
 }: {
   metrics: PublicProfile["metrics"];
   windowMonths: number;
+  /** Decides whether the Margin tile is tagged unverified. */
+  verificationTier?: string;
   /** The reader's chosen window, spelled out. The heading, the tiles and the
    *  chart all describe THIS span — they used to say "Last 30 days" while the
    *  chart said twelve months. */
@@ -619,7 +641,19 @@ function ProfileDashboard({
           [
             { key: "profit", label: "Profit", value: money(metrics.last_30d?.profit ?? null, currency) },
             { key: "revenue", label: "Revenue", value: money(metrics.last_30d?.revenue ?? null, currency) },
-            { key: "margin", label: "Margin", value: pct(metrics.last_30d?.margin_pct ?? null) },
+            {
+              key: "margin",
+              label: "Margin",
+              value: pct(metrics.last_30d?.margin_pct ?? null),
+              /* Tagged only when there IS a margin to qualify — "unverified"
+                 over an em dash would be qualifying nothing. */
+              tag:
+                verificationTier !== undefined &&
+                verificationTier !== "verified_margin" &&
+                metrics.last_30d?.margin_pct != null
+                  ? UNVERIFIED_MARGIN_TAG
+                  : undefined,
+            },
             /* PPC — advertising spend, in money, beside the margin it eats
                into. 🚨 THE ONE TILE THAT DISAPPEARS rather than showing a
                dash: `ad_spend` is null for "not reported", so a "—" would
@@ -654,6 +688,7 @@ function ProfileDashboard({
                  period, and publishing one the seller did not choose to
                  publish is the same mistake as a comparison line. */
               delta={null}
+              tag={"tag" in t ? t.tag : undefined}
               spark={plottable ? spark(plottable.key) : undefined}
               selected={plottable ? plottable.key === active.key : false}
               onClick={plottable ? () => setPlot(plottable.key) : undefined}
@@ -991,6 +1026,7 @@ export function PublicProfileBody({
         {m.series || m.margin_series || m.daily ? (
           <ProfileDashboard
             metrics={m}
+            verificationTier={profile.verification?.tier}
             windowMonths={profile.window.months}
             windowLabel={
               WINDOW_OPTIONS.find((o) => o.value === profile.window.key)?.label ?? "Last 30 days"

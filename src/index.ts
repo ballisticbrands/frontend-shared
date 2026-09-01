@@ -202,13 +202,22 @@
 //          the chart AND the picker with it. 7d and 30d rendered a profile
 //          with no dashboard at all.
 
+// v0.9.29: the Margin tile carries an "unverified" tag on any profile whose
+//          tier is not verified_margin, with the explainer on hover.
+//          verified_revenue means the REVENUE came from Amazon and the cost
+//          side is a percentage the seller supplied — so the margin is
+//          theirs, not ours, and showing it beside a green tick let a checked
+//          figure vouch for an unchecked one. StatTile gains a `tag` prop for
+//          it: a hint explains a missing number, a tag says the number is
+//          there and we are not vouching for it.
+
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
 // a brand is actually serving, so a stale value is worse than no value — it
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.28";
+export const SHARED_PACKAGE_VERSION = "0.9.29";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
@@ -465,5 +474,10 @@ export {
   VERIFICATION_TIP,
 } from "./components/VerificationBadge";
 export type { VerificationBadgeState } from "./components/VerificationBadge";
-export { PublicProfilePage, ShareButton, AMAZON_MARK_SRC } from "./pages/PublicProfile";
+export {
+  PublicProfilePage,
+  ShareButton,
+  AMAZON_MARK_SRC,
+  UNVERIFIED_MARGIN_TAG,
+} from "./pages/PublicProfile";
 export type { ProfileOwnerProps, PublicProfilePageProps } from "./pages/PublicProfile";
