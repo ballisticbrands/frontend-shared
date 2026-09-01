@@ -45,6 +45,8 @@ import { ApiError } from "../api";
 import { StatTile } from "../components/ui/StatTile";
 import { TrendChart } from "../components/ui/TrendChart";
 import {
+  type WindowKey,
+  WINDOW_OPTIONS,
   SELLER_TYPES,
   SOCIAL_FIELDS,
   VISIBILITY_FIELDS,
@@ -107,6 +109,13 @@ export interface PublicProfilePageProps {
    *  redirect (301) to the current one. */
   onMoved?: (to: string) => void;
   defaultMonths?: number;
+  /** Which windows this reader may actually open. Session knowledge, so the
+   *  host resolves it — see WindowPicker. Omitted means every window is open,
+   *  which is right for a host that has no gate. */
+  unlockedWindows?: readonly WindowKey[];
+  /** A locked window was picked. The host's slot for whatever the gate is —
+   *  on VerifiedMargins, the "add your business" dialog. */
+  onLockedWindow?: (key: WindowKey) => void;
   defaultCurrency?: string;
   /** Rendered directly above the name and picture, on the same line as the
    *  actions column. The host supplies the markup because breadcrumbs are
@@ -491,9 +500,16 @@ type PlotKey = "revenue" | "profit" | "margin";
 function ProfileDashboard({
   metrics,
   windowMonths,
+  windowLabel,
+  picker,
 }: {
   metrics: PublicProfile["metrics"];
   windowMonths: number;
+  /** The reader's chosen window, spelled out. The heading, the tiles and the
+   *  chart all describe THIS span — they used to say "Last 30 days" while the
+   *  chart said twelve months. */
+  windowLabel?: string;
+  picker?: React.ReactNode;
 }) {
   const daily = metrics.daily;
   const series = metrics.series;
@@ -583,7 +599,8 @@ function ProfileDashboard({
           rather than fixed. Publishing day-level revenue is a deliberate
           trade (see dailySeries in the backend's public-profile.ts): days
           expose launch timing, promo cadence and stockouts. */}
-      <h2>Last 30 days</h2>
+      <h2>{windowLabel ?? "Last 30 days"}</h2>
+      {picker}
 
       {/* FOUR TILES, ALWAYS THE SAME FOUR — the set the business page shows,
           so a reader moving between the two pages does not have to re-learn
@@ -647,7 +664,10 @@ function ProfileDashboard({
 
       <p data-chart-label="">
         <small>
-          {active.label} {useDaily ? "by day, last 30 days" : `by month, last ${windowMonths} months`}
+          {active.label}{" "}
+          {useDaily
+            ? `by day, ${(windowLabel ?? "last 30 days").toLowerCase()}`
+            : `by month, last ${windowMonths} months`}
         </small>
       </p>
       <div data-chart="">
@@ -705,6 +725,9 @@ export function editFormFrom(profile: PublicProfile): ProfileEditForm {
 
 export interface PublicProfileBodyProps {
   profile: PublicProfile;
+  /** Rendered in the dashboard header. Session-dependent, so the container
+   *  builds it and this component only places it. */
+  picker?: React.ReactNode;
   actions?: ReactNode;
   /** See PublicProfilePageProps.breadcrumb — placed by the header, supplied
    *  by the host. */
@@ -736,6 +759,7 @@ export interface PublicProfileBodyProps {
  */
 export function PublicProfileBody({
   profile,
+  picker,
   actions,
   breadcrumb,
   owner,
@@ -961,7 +985,14 @@ export function PublicProfileBody({
         {owner && m.margin_note ? <p data-owner-note="">{m.margin_note}</p> : null}
 
         {m.series || m.margin_series ? (
-          <ProfileDashboard metrics={m} windowMonths={profile.window.months} />
+          <ProfileDashboard
+            metrics={m}
+            windowMonths={profile.window.months}
+            windowLabel={
+              WINDOW_OPTIONS.find((o) => o.value === profile.window.key)?.label ?? "Last 30 days"
+            }
+            picker={picker}
+          />
         ) : null}
 
         {/* What they run, under the numbers: the figures above are the claim,
@@ -1054,12 +1085,70 @@ export function PublicProfileBody({
 
 // ─── the page apps mount ─────────────────────────────────────────────
 
+/**
+ * The window selector.
+ *
+ * 🚨 WHICH OPTIONS ARE LOCKED IS SESSION KNOWLEDGE, and this file is
+ * deliberately session-free — it renders public data for anyone, crawlers
+ * included. So the host passes the ANSWER (`unlocked`) rather than the
+ * question, exactly as it does for `owner`. A page that decided this itself
+ * would need two rendering modes to keep honest.
+ *
+ * Locked options are rendered, not hidden. Hiding them would make the gate
+ * invisible and the offer unmakeable — the whole point is that a reader can
+ * see what connecting their own business would unlock.
+ */
+function WindowPicker({
+  value,
+  options,
+  unlocked,
+  onPick,
+  onLockedPick,
+}: {
+  value: WindowKey;
+  options: ReadonlyArray<{ value: WindowKey; label: string }>;
+  unlocked: readonly WindowKey[];
+  onPick: (k: WindowKey) => void;
+  onLockedPick?: (k: WindowKey) => void;
+}) {
+  return (
+    <span data-window-picker="">
+      <label>
+        <span className="vm-visually-hidden">Window</span>
+        <select
+          value={value}
+          data-window-select=""
+          onChange={(e) => {
+            const next = e.target.value as WindowKey;
+            if (unlocked.includes(next)) onPick(next);
+            /* A locked pick must not change the board underneath the dialog —
+               the reader has not earned that view, and leaving it selected
+               would show them the answer while asking them to pay for it. */
+            else onLockedPick?.(next);
+          }}
+        >
+          {options.map((o) => {
+            const locked = !unlocked.includes(o.value);
+            return (
+              <option key={o.value} value={o.value}>
+                {locked ? `🔒 ${o.label}` : o.label}
+              </option>
+            );
+          })}
+        </select>
+      </label>
+    </span>
+  );
+}
+
 export function PublicProfilePage({
   username,
   actions,
   owner,
   onMoved,
   defaultMonths = 12,
+  unlockedWindows,
+  onLockedWindow,
   defaultCurrency = "USD",
   onLoaded,
   breadcrumb,
@@ -1075,7 +1164,13 @@ export function PublicProfilePage({
    * does in the top bar: the select would move, and the page would go on
    * showing dollars. Held as plain props, a change flows into `load`'s deps
    * and refetches, which is the only way the figures can actually convert. */
-  const months = defaultMonths;
+  /* `defaultMonths` is now only the fallback label for a payload without a
+     window key — the fetch is driven by the selector below. */
+  void defaultMonths;
+  /* 30 days by default: what a seller is doing NOW, with a year as the
+     context you opt into. The backend defaults the same way. */
+  const [windowKey, setWindowKey] = useState<WindowKey>("30d");
+  const openWindows = unlockedWindows ?? WINDOW_OPTIONS.map((o) => o.value);
   const currency = defaultCurrency;
   const [form, setForm] = useState<ProfileEditForm | null>(null);
   const [saving, setSaving] = useState(false);
@@ -1101,8 +1196,8 @@ export function PublicProfilePage({
       // as the public endpoint, and it renders an unpublished profile — which
       // is the only reason an owner can look at their own draft page at all.
       const next = ownerProfileId
-        ? await fetchProfilePreview(ownerProfileId, { months, currency })
-        : await fetchPublicProfile(username, { months, currency });
+        ? await fetchProfilePreview(ownerProfileId, { window: windowKey, currency })
+        : await fetchPublicProfile(username, { window: windowKey, currency });
       setProfile(next);
       setError(null);
       onLoadedRef.current?.(next);
@@ -1120,7 +1215,7 @@ export function PublicProfilePage({
       setError(err instanceof Error ? err.message : String(err));
       return null;
     }
-  }, [username, ownerProfileId, months, currency, onMoved]);
+  }, [username, ownerProfileId, windowKey, currency, onMoved]);
 
   useEffect(() => {
     void load();
@@ -1165,6 +1260,15 @@ export function PublicProfilePage({
 
   return (
     <PublicProfileBody
+      picker={
+        <WindowPicker
+          value={windowKey}
+          options={WINDOW_OPTIONS}
+          unlocked={openWindows}
+          onPick={setWindowKey}
+          onLockedPick={onLockedWindow}
+        />
+      }
       profile={profile}
       actions={actions}
       breadcrumb={breadcrumb}

@@ -232,10 +232,13 @@ export function requestProfileSnapshot(id: string): Promise<{ status: string }> 
 
 export function fetchProfilePreview(
   id: string,
-  opts: { months?: number; currency?: string } = {},
+  opts: { months?: number; window?: WindowKey; currency?: string } = {},
 ): Promise<PublicProfile> {
   const params = new URLSearchParams();
-  if (opts.months) params.set("months", String(opts.months));
+  /* `window` wins where both are given. `months` stays because links carrying
+     it are already in the wild and the backend still maps them. */
+  if (opts.window) params.set("window", opts.window);
+  else if (opts.months) params.set("months", String(opts.months));
   if (opts.currency) params.set("currency", opts.currency);
   const qs = params.toString();
   return apiFetch<PublicProfile>(
@@ -244,6 +247,19 @@ export function fetchProfilePreview(
 }
 
 // ─── public ──────────────────────────────────────────────────────────
+
+/** The five windows a reader may choose. The grain (day vs month) is the
+ *  backend's to decide and travels back on the payload — the client never
+ *  infers it from the key. */
+export type WindowKey = "7d" | "30d" | "3m" | "6m" | "12m";
+
+export const WINDOW_OPTIONS: ReadonlyArray<{ value: WindowKey; label: string }> = [
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "3m", label: "Last 3 months" },
+  { value: "6m", label: "Last 6 months" },
+  { value: "12m", label: "Last 12 months" },
+];
 
 export interface CurrencyTotals {
   currency: string;
@@ -278,7 +294,17 @@ export interface PublicProfile {
     verified_at: string | null;
     note: string | null;
   };
-  window: { months: number; from: string; through: string; includes_partial_month: boolean };
+  window: {
+    /** Which of the five the reader is looking at. */
+    key: WindowKey;
+    /** Whose decision the grain is: the backend's. `daily` is non-null on
+     *  "day", `series` on "month", never both. */
+    grain: "day" | "month";
+    months: number;
+    from: string;
+    through: string;
+    includes_partial_month: boolean;
+  };
   visibility: Visibility;
   metrics: {
     native: CurrencyTotals[] | null;
@@ -378,10 +404,13 @@ export interface PublicProfileMoved {
 
 export function fetchPublicProfile(
   username: string,
-  opts: { months?: number; currency?: string } = {},
+  opts: { months?: number; window?: WindowKey; currency?: string } = {},
 ): Promise<PublicProfile> {
   const params = new URLSearchParams();
-  if (opts.months) params.set("months", String(opts.months));
+  /* `window` wins where both are given. `months` stays because links carrying
+     it are already in the wild and the backend still maps them. */
+  if (opts.window) params.set("window", opts.window);
+  else if (opts.months) params.set("months", String(opts.months));
   if (opts.currency) params.set("currency", opts.currency);
   const qs = params.toString();
   // auth: false — a public page must render for a signed-out visitor,

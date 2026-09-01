@@ -183,6 +183,17 @@
 //          `last_30d.ad_spend` is null for "not reported", so "—" would imply
 //          we looked and found nothing while "$0" would assert that a seller
 //          who advertises does not.
+// v0.9.25: the business mark follows the business, not how its data arrived —
+//          a manual Amazon business drew an anonymous square on the founder
+//          profile while its own page drew the Amazon mark.
+//          🚨 Shipped with this constant left at 0.9.24: the version was
+//          bumped in package.json and published without re-running the tests
+//          that exist to catch exactly that.
+// v0.9.26: a reader-chosen window on the profile — 7d / 30d / 3m / 6m / 12m,
+//          defaulting to 30d. Which options are LOCKED is session knowledge,
+//          so the host passes `unlockedWindows` and `onLockedWindow` rather
+//          than this page deciding; locked options render locked rather than
+//          hidden, because a gate nobody can see is an offer nobody can take.
 
 // 🚨 KEEP THIS CONSTANT AND package.json's "version" IN STEP, and add a line
 // above for every bump. The constant exists to tell us at runtime which build
@@ -190,7 +201,7 @@
 // is a confident wrong answer. It drifted three releases behind (0.9.11 while
 // the package said 0.9.14) before test/version.test.mjs was added to fail on
 // exactly that, and on a version with no changelog line.
-export const SHARED_PACKAGE_VERSION = "0.9.24";
+export const SHARED_PACKAGE_VERSION = "0.9.26";
 
 // Config
 export { configureShared, getSharedConfig } from "./config";
